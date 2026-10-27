@@ -438,7 +438,7 @@
         return `${toThaiNumber(d)} ${months[m]} ${toThaiNumber(y)}`;
     }
 
-    // ฟังก์ชันวาดตราประทับสีน้ำเงินฟอนต์สารบรรณตามรูปตัวอย่างเป๊ะๆ
+    // ฟังก์ชันวาดตราประทับสีน้ำเงินฟอนต์สารบรรณ กรอบเส้นเดียว เส้นประเท่ากันทุกบรรทัด สวยงามสมบูรณ์
     async function stampPdfClientSide(pdfFile, regNum, dateStr, timeStr) {
         const existingPdfBytes = await pdfFile.arrayBuffer();
         const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
@@ -448,77 +448,68 @@
 
         // สร้าง Canvas ความคมชัดสูง
         const canvas = document.createElement('canvas');
-        canvas.width = 500;
-        canvas.height = 200;
+        canvas.width = 480;
+        canvas.height = 180;
         const ctx = canvas.getContext('2d');
 
         // พื้นหลังขาว
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // กรอบสี่เหลี่ยมสีน้ำเงินเข้มตามแบบ
-        ctx.strokeStyle = '#000080'; // น้ำเงินกรมท่า/น้ำเงินเข้ม
-        ctx.lineWidth = 4;
-        ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
-
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+        // กรอบสี่เหลี่ยมเส้นเดียว สีน้ำเงินเข้ม (#000080)
+        ctx.strokeStyle = '#000080';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
 
         ctx.fillStyle = '#000080';
 
-        // บรรทัดที่ 1: ชื่อโรงเรียน (ฟอนต์สารบรรณ หนา)
-        ctx.font = 'bold 24px "Sarabun", sans-serif';
+        // บรรทัดที่ 1: ชื่อโรงเรียน (ฟอนต์สารบรรณ หนา เด่นชัด)
+        ctx.font = 'bold 22px "Sarabun", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', canvas.width / 2, 45);
+        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', canvas.width / 2, 40);
 
-        // ตั้งค่าตัวอักษรสำหรับบรรทัดข้อมูล
-        ctx.font = '20px "Sarabun", sans-serif';
+        // บรรทัดที่ 2, 3, 4: รายละเอียด (ขนาดตัวอักษร 18px สอดรับกันพอดี)
+        ctx.font = '18px "Sarabun", sans-serif';
         ctx.textAlign = 'left';
 
+        const startX = 35;
+        const lineStartX = 100;
+        const lineEndX = 450;
+
         // บรรทัดที่ 2: รับที่
-        ctx.fillText('รับที่', 30, 92);
-        ctx.fillText(toThaiNumber(regNum), 95, 92);
-        // เส้นประใต้ช่องรับที่
-        ctx.strokeStyle = '#000080';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([4, 3]);
-        ctx.beginPath();
-        ctx.moveTo(85, 98);
-        ctx.lineTo(240, 98);
-        ctx.stroke();
+        ctx.fillText('รับที่', startX, 82);
+        ctx.fillText(toThaiNumber(regNum), lineStartX + 10, 82);
 
         // บรรทัดที่ 3: วันที่
-        ctx.setLineDash([]);
-        ctx.fillText('วันที่', 30, 138);
+        ctx.fillText('วันที่', startX, 122);
         const thaiDateText = toThaiDate(dateStr);
-        ctx.fillText(thaiDateText, 95, 138);
-        ctx.strokeStyle = '#000080';
-        ctx.setLineDash([4, 3]);
-        ctx.beginPath();
-        ctx.moveTo(85, 144);
-        ctx.lineTo(340, 144);
-        ctx.stroke();
+        ctx.fillText(thaiDateText, lineStartX + 10, 122);
 
         // บรรทัดที่ 4: เวลา
-        ctx.setLineDash([]);
-        ctx.fillText('เวลา', 30, 182);
-        ctx.fillText(toThaiNumber(timeStr), 95, 182);
+        ctx.fillText('เวลา', startX, 160);
+        ctx.fillText(toThaiNumber(timeStr), lineStartX + 10, 160);
+
+        // วาดเส้นประให้มีความยาวเท่ากันทุกบรรทัด
         ctx.strokeStyle = '#000080';
-        ctx.setLineDash([4, 3]);
-        ctx.beginPath();
-        ctx.moveTo(85, 188);
-        ctx.lineTo(250, 188);
-        ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+
+        [88, 128, 166].forEach(yPos => {
+            ctx.beginPath();
+            ctx.moveTo(lineStartX, yPos);
+            ctx.lineTo(lineEndX, yPos);
+            ctx.stroke();
+        });
 
         const dataUrl = canvas.toDataURL('image/png');
         const pngImageBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
         const pngImage = await pdfDoc.embedPng(pngImageBytes);
 
         // วางตราประทับไว้มุมขวาบนของหน้าแรก
-        const stampWidth = 210;
-        const stampHeight = 84;
-        const x = width - stampWidth - 35;
-        const y = height - stampHeight - 35;
+        const stampWidth = 220;
+        const stampHeight = 82;
+        const x = width - stampWidth - 30;
+        const y = height - stampHeight - 30;
 
         firstPage.drawImage(pngImage, {
             x: x,
@@ -582,8 +573,8 @@
         }
     }
 
-    // ฟังก์ชันแปลงลิงก์ Google Drive ให้เป็นแบบ Preview ที่ถูกต้อง (ดึง File ID มาสร้างลิงก์พรีวิวตรงๆ)
-    function getDrivePreviewUrl(url) {
+    // ฟังก์ชันแปลงลิงก์ Google Drive ให้เปิดหน้าต่างใหม่ในโหมด View อย่างถูกต้อง
+    function getDriveViewUrl(url) {
         if (!url) return '#';
         let fileId = '';
         const match = url.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
@@ -591,7 +582,7 @@
             fileId = match[1];
         }
         if (fileId) {
-            return `https://drive.google.com/file/d/${fileId}/preview`;
+            return `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
         }
         return url;
     }
@@ -606,7 +597,7 @@
 
             if (data.status === 'success' && data.books.length > 0) {
                 let rowsHtml = data.books.map(b => {
-                    let previewUrl = getDrivePreviewUrl(b.pdf_stamped_url);
+                    let viewUrl = getDriveViewUrl(b.pdf_stamped_url);
                     return `
                         <tr>
                             <td class="text-center"><span class="badge bg-secondary fs-6">${b.reg_num}</span></td>
@@ -614,7 +605,7 @@
                             <td>${b.doc_from}</td>
                             <td>${b.subject}</td>
                             <td class="text-center">
-                                <a href="${previewUrl}" target="_blank" class="btn btn-outline-primary btn-sm mb-1"><i class="fas fa-file-pdf"></i> เปิดดูไฟล์</a>
+                                <a href="${viewUrl}" target="_blank" class="btn btn-outline-primary btn-sm mb-1"><i class="fas fa-file-pdf"></i> เปิดดูไฟล์</a>
                                 <button class="btn btn-warning btn-sm mb-1 text-dark" onclick="openRetireModal('${b.book_id}')"><i class="fas fa-pen-nib"></i> เกษียณหนังสือ</button>
                             </td>
                         </tr>
