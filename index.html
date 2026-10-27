@@ -227,6 +227,21 @@
     </div>
 </div>
 
+<!-- Modal สำหรับพรีวิวดูไฟล์ PDF (ไม่ดาวน์โหลด) -->
+<div class="modal fade" id="pdfPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="height: 90vh;">
+        <div class="modal-content" style="height: 100%;">
+            <div class="modal-header bg-primary text-white py-2">
+                <h5 class="modal-title"><i class="fas fa-file-pdf"></i> ตรวจสอบเอกสาร PDF</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="height: calc(100% - 50px);">
+                <iframe id="pdfPreviewIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -438,7 +453,7 @@
         return `${toThaiNumber(d)} ${months[m]} ${toThaiNumber(y)}`;
     }
 
-    // ฟังก์ชันวาดตราประทับสีน้ำเงินคำนวณขนาดพอดีเนื้อหา เส้นประยาวเท่ากัน เนื้อหาขนาดเท่ากัน และชื่อโรงเรียนใหญ่กว่า
+    // ฟังก์ชันวาดตราประทับสีน้ำเงิน สัดส่วนธรรมชาติ ตัวอักษรคมชัดไม่ยืดเบี้ยว
     async function stampPdfClientSide(pdfFile, regNum, dateStr, timeStr) {
         const existingPdfBytes = await pdfFile.arrayBuffer();
         const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
@@ -446,30 +461,10 @@
         const firstPage = pages[0];
         const { width, height } = firstPage.getSize();
 
-        // คำนวณความกว้างอัตโนมัติให้พอดีกับบรรทัดวันที่และเนื้อหา
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
-        
-        const schoolFont = 'bold 22px "Sarabun", sans-serif';
-        const contentFont = '19px "Sarabun", sans-serif';
-
-        tempCtx.font = schoolFont;
-        const schoolWidth = tempCtx.measureText('โรงเรียนพิมานพิทยาสรรค์').width;
-
-        tempCtx.font = contentFont;
-        const thaiDateText = toThaiDate(dateStr);
-        const dateWidth = tempCtx.measureText('วันที่ ' + thaiDateText).width;
-        const regWidth = tempCtx.measureText('รับที่ ' + toThaiNumber(regNum)).width;
-        const timeWidth = tempCtx.measureText('เวลา ' + toThaiNumber(timeStr)).width;
-
-        // ความกว้างกรอบพอดีกับบรรทัดวันที่/เนื้อหาที่ยาวที่สุด
-        const maxTextWidth = Math.max(schoolWidth, dateWidth, regWidth, timeWidth);
-        const canvasWidth = Math.ceil(maxTextWidth + 45); 
-        const canvasHeight = 175; // เว้นระยะขอบบนล่างสวยงาม
-
+        // กำหนดขนาดสัดส่วนมาตรฐานคงที่ (450 x 180) เพื่อป้องกันตัวอักษรยืดหรือเบี้ยว
         const canvas = document.createElement('canvas');
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
+        canvas.width = 450;
+        canvas.height = 180;
         const ctx = canvas.getContext('2d');
 
         // พื้นหลังขาว
@@ -478,41 +473,43 @@
 
         // กรอบสี่เหลี่ยมเส้นเดียว สีน้ำเงินเข้ม (#000080)
         ctx.strokeStyle = '#000080';
-        ctx.lineWidth = 2.5;
-        ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+        ctx.lineWidth = 3;
+        ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
 
         ctx.fillStyle = '#000080';
 
-        // บรรทัดที่ 1: ชื่อโรงเรียน (ขนาดใหญ่ที่สุด)
-        ctx.font = schoolFont;
+        // บรรทัดที่ 1: ชื่อโรงเรียน (ตัวหนา ขนาดใหญ่กว่าเนื้อหาเล็กน้อย)
+        ctx.font = 'bold 21px "Sarabun", sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', 15, 38);
+        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', 22, 42);
 
-        // บรรทัดที่ 2, 3, 4: เนื้อหา (ขนาด 19px เท่ากันทุกบรรทัด และเล็กกว่าชื่อโรงเรียนนิดนึง)
-        ctx.font = contentFont;
-        const labelX = 15;
-        const valX = 60;
-        const lineStartX = 56;
-        const lineEndX = canvas.width - 15; // จุดประมีความยาวเท่ากันทุกบรรทัด
+        // บรรทัดที่ 2, 3, 4: เนื้อหา (ขนาดเท่ากัน 18px เป็นธรรมชาติ)
+        ctx.font = '18px "Sarabun", sans-serif';
+
+        const labelX = 22;
+        const valX = 72;
+        const lineStartX = 68;
+        const lineEndX = canvas.width - 22; // เส้นประมีความยาวเท่ากันและพอดีกรอบ
 
         // บรรทัดที่ 2: รับที่
-        ctx.fillText('รับที่', labelX, 76);
-        ctx.fillText(toThaiNumber(regNum), valX, 76);
+        ctx.fillText('รับที่', labelX, 82);
+        ctx.fillText(toThaiNumber(regNum), valX, 82);
 
         // บรรทัดที่ 3: วันที่
-        ctx.fillText('วันที่', labelX, 116);
-        ctx.fillText(thaiDateText, valX, 116);
+        ctx.fillText('วันที่', labelX, 122);
+        const thaiDateText = toThaiDate(dateStr);
+        ctx.fillText(thaiDateText, valX, 122);
 
         // บรรทัดที่ 4: เวลา
-        ctx.fillText('เวลา', labelX, 152);
-        ctx.fillText(toThaiNumber(timeStr), valX, 152);
+        ctx.fillText('เวลา', labelX, 158);
+        ctx.fillText(toThaiNumber(timeStr), valX, 158);
 
         // วาดเส้นประให้มีความยาวเท่ากันทุกบรรทัด
         ctx.strokeStyle = '#000080';
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
 
-        [82, 122, 158].forEach(yPos => {
+        [89, 129, 165].forEach(yPos => {
             ctx.beginPath();
             ctx.moveTo(lineStartX, yPos);
             ctx.lineTo(lineEndX, yPos);
@@ -523,7 +520,7 @@
         const pngImageBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
         const pngImage = await pdfDoc.embedPng(pngImageBytes);
 
-        // วางตราประทับไว้มุมขวาบนของหน้าแรก
+        // วางตราประทับบน PDF ด้วยขนาดที่รักษาสัดส่วน 2.5:1 เป๊ะ (200 x 80)
         const stampWidth = 200;
         const stampHeight = 80;
         const x = width - stampWidth - 30;
@@ -591,18 +588,17 @@
         }
     }
 
-    // ฟังก์ชันแปลงลิงก์ Google Drive ให้เปิดหน้าต่างพรีวิวออนไลน์ใหม่ในแท็บใหม่โดยไม่ดาวน์โหลด
-    function getDriveViewUrl(url) {
-        if (!url) return '#';
+    // ฟังก์ชันเปิด Modal พรีวิว PDF ออนไลน์ (ไม่ดาวน์โหลด)
+    function openPdfPreviewModal(url) {
+        if (!url) return;
         let fileId = '';
         const match = url.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
         if (match && match[1]) {
             fileId = match[1];
         }
-        if (fileId) {
-            return `https://drive.google.com/file/d/${fileId}/preview`;
-        }
-        return url;
+        const previewUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url;
+        document.getElementById('pdfPreviewIframe').src = previewUrl;
+        new bootstrap.Modal(document.getElementById('pdfPreviewModal')).show();
     }
 
     async function loadRegisteredBooks() {
@@ -615,7 +611,6 @@
 
             if (data.status === 'success' && data.books.length > 0) {
                 let rowsHtml = data.books.map(b => {
-                    let viewUrl = getDriveViewUrl(b.pdf_stamped_url);
                     return `
                         <tr>
                             <td class="text-center"><span class="badge bg-secondary fs-6">${b.reg_num}</span></td>
@@ -623,7 +618,7 @@
                             <td>${b.doc_from}</td>
                             <td>${b.subject}</td>
                             <td class="text-center">
-                                <a href="${viewUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm mb-1"><i class="fas fa-file-pdf"></i> เปิดดูไฟล์</a>
+                                <button onclick="openPdfPreviewModal('${b.pdf_stamped_url}')" class="btn btn-outline-primary btn-sm mb-1"><i class="fas fa-file-pdf"></i> เปิดดูไฟล์</button>
                                 <button class="btn btn-warning btn-sm mb-1 text-dark" onclick="openRetireModal('${b.book_id}')"><i class="fas fa-pen-nib"></i> เกษียณหนังสือ</button>
                             </td>
                         </tr>
