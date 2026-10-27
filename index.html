@@ -438,7 +438,7 @@
         return `${toThaiNumber(d)} ${months[m]} ${toThaiNumber(y)}`;
     }
 
-    // ฟังก์ชันวาดตราประทับสีน้ำเงินฟอนต์สารบรรณ กรอบเส้นเดียว เส้นประเท่ากันทุกบรรทัด สวยงามสมบูรณ์
+    // ฟังก์ชันวาดตราประทับสีน้ำเงิน: ชื่อโรงเรียนชิดซ้าย, ขนาดตัวอักษรเท่ากันและใหญ่กว่าชื่อโรงเรียนเล็กน้อย, กรอบเส้นเดี่ยวพอดีเนื้อหา
     async function stampPdfClientSide(pdfFile, regNum, dateStr, timeStr) {
         const existingPdfBytes = await pdfFile.arrayBuffer();
         const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
@@ -446,9 +446,8 @@
         const firstPage = pages[0];
         const { width, height } = firstPage.getSize();
 
-        // สร้าง Canvas ความคมชัดสูง
         const canvas = document.createElement('canvas');
-        canvas.width = 480;
+        canvas.width = 440;
         canvas.height = 180;
         const ctx = canvas.getContext('2d');
 
@@ -456,45 +455,45 @@
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // กรอบสี่เหลี่ยมเส้นเดียว สีน้ำเงินเข้ม (#000080)
+        // กรอบสี่เหลี่ยมเส้นเดียว สีน้ำเงินเข้ม (#000080) พอดีกับเนื้อหา
         ctx.strokeStyle = '#000080';
         ctx.lineWidth = 3;
         ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
 
         ctx.fillStyle = '#000080';
 
-        // บรรทัดที่ 1: ชื่อโรงเรียน (ฟอนต์สารบรรณ หนา เด่นชัด)
-        ctx.font = 'bold 22px "Sarabun", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', canvas.width / 2, 40);
-
-        // บรรทัดที่ 2, 3, 4: รายละเอียด (ขนาดตัวอักษร 18px สอดรับกันพอดี)
-        ctx.font = '18px "Sarabun", sans-serif';
+        // บรรทัดที่ 1: ชื่อโรงเรียน (ชิดซ้าย ขนาดเล็กกว่าหัวข้อรายการนิดหน่อย)
+        ctx.font = 'bold 18px "Sarabun", sans-serif';
         ctx.textAlign = 'left';
+        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', 25, 40);
 
-        const startX = 35;
-        const lineStartX = 100;
-        const lineEndX = 450;
+        // บรรทัดที่ 2, 3, 4: รายละเอียด (ขนาดตัวอักษร 20px เท่ากัน และใหญ่กว่าชื่อโรงเรียน)
+        ctx.font = '20px "Sarabun", sans-serif';
+
+        const labelX = 25;
+        const valX = 85;
+        const lineStartX = 80;
+        const lineEndX = 415;
 
         // บรรทัดที่ 2: รับที่
-        ctx.fillText('รับที่', startX, 82);
-        ctx.fillText(toThaiNumber(regNum), lineStartX + 10, 82);
+        ctx.fillText('รับที่', labelX, 85);
+        ctx.fillText(toThaiNumber(regNum), valX, 85);
 
         // บรรทัดที่ 3: วันที่
-        ctx.fillText('วันที่', startX, 122);
+        ctx.fillText('วันที่', labelX, 128);
         const thaiDateText = toThaiDate(dateStr);
-        ctx.fillText(thaiDateText, lineStartX + 10, 122);
+        ctx.fillText(thaiDateText, valX, 128);
 
         // บรรทัดที่ 4: เวลา
-        ctx.fillText('เวลา', startX, 160);
-        ctx.fillText(toThaiNumber(timeStr), lineStartX + 10, 160);
+        ctx.fillText('เวลา', labelX, 166);
+        ctx.fillText(toThaiNumber(timeStr), valX, 166);
 
-        // วาดเส้นประให้มีความยาวเท่ากันทุกบรรทัด
+        // วาดเส้นประให้มีความยาวเท่ากันทุกบรรทัดอย่างเป็นระเบียบ
         ctx.strokeStyle = '#000080';
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
 
-        [88, 128, 166].forEach(yPos => {
+        [92, 135, 172].forEach(yPos => {
             ctx.beginPath();
             ctx.moveTo(lineStartX, yPos);
             ctx.lineTo(lineEndX, yPos);
@@ -506,7 +505,7 @@
         const pngImage = await pdfDoc.embedPng(pngImageBytes);
 
         // วางตราประทับไว้มุมขวาบนของหน้าแรก
-        const stampWidth = 220;
+        const stampWidth = 200;
         const stampHeight = 82;
         const x = width - stampWidth - 30;
         const y = height - stampHeight - 30;
@@ -573,7 +572,7 @@
         }
     }
 
-    // ฟังก์ชันแปลงลิงก์ Google Drive ให้เปิดหน้าต่างใหม่ในโหมด View อย่างถูกต้อง
+    // ฟังก์ชันแปลงลิงก์ Google Drive ให้เปิดหน้าต่างพรีวิวออนไลน์ใหม่ในแท็บเดิม/แท็บใหม่ได้อย่างถูกต้องโดยไม่ดาวน์โหลด
     function getDriveViewUrl(url) {
         if (!url) return '#';
         let fileId = '';
