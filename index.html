@@ -134,7 +134,7 @@
         </div>
     </div>
 
-    <!-- 2. หน้าเมนูระบบงานสารบรรณ (Sidebar Layout กระชับ ไม่ต้องเลื่อน) -->
+    <!-- 2. หน้าเมนูระบบงานสารบรรณ -->
     <div id="sarabunDashboard" class="dashboard-container hidden">
         <div class="sidebar">
             <div class="sidebar-header">
@@ -142,19 +142,19 @@
             </div>
             <div class="sidebar-menu">
                 <a onclick="showSarabunView('register')" class="menu-link active" id="s_register">
-                    <i class="fas fa-file-medical"></i> 1. นำหนังสือรับเข้าแฟ้ม
+                    <i class="fas fa-file-medical"></i> นำหนังสือรับเข้าแฟ้ม
                 </a>
                 <a onclick="showSarabunView('listRegistered')" class="menu-link" id="s_listRegistered">
-                    <i class="fas fa-list-alt"></i> 2. หนังสือรับที่ลงทะเบียนแล้ว
+                    <i class="fas fa-list-alt"></i> หนังสือรับที่ลงทะเบียนแล้ว
                 </a>
                 <a onclick="showSarabunView('returnList')" class="menu-link" id="s_returnList">
-                    <i class="fas fa-paper-plane"></i> 3. หนังสือส่งกลับจากฝ่ายบริหาร
+                    <i class="fas fa-paper-plane"></i> หนังสือส่งกลับจากฝ่ายบริหาร
                 </a>
                 <a onclick="showSarabunView('report')" class="menu-link" id="s_report">
-                    <i class="fas fa-print"></i> 4. พิมพ์ทะเบียนหนังสือรับ
+                    <i class="fas fa-print"></i> พิมพ์ทะเบียนหนังสือรับ
                 </a>
                 <a onclick="showSarabunView('signature')" class="menu-link" id="s_signature">
-                    <i class="fas fa-signature"></i> 5. จัดการลายเซ็น/ตำแหน่ง
+                    <i class="fas fa-signature"></i> จัดการลายเซ็น/ตำแหน่ง
                 </a>
             </div>
             <div class="sidebar-footer">
@@ -166,7 +166,7 @@
         </div>
     </div>
 
-    <!-- 3. หน้าเมนูระบบฝ่ายบริหาร (Sidebar Layout กระชับ ไม่ต้องเลื่อน) -->
+    <!-- 3. หน้าเมนูระบบฝ่ายบริหาร -->
     <div id="executiveDashboard" class="dashboard-container hidden">
         <div class="sidebar">
             <div class="sidebar-header">
@@ -174,13 +174,13 @@
             </div>
             <div class="sidebar-menu">
                 <a onclick="showExecView('pending')" class="menu-link active" id="e_pending">
-                    <i class="fas fa-clock"></i> 1. พิจารณาหนังสือรับ
+                    <i class="fas fa-clock"></i> พิจารณาหนังสือรับ
                 </a>
                 <a onclick="showExecView('all')" class="menu-link" id="e_all">
-                    <i class="fas fa-folder"></i> 2. หนังสือรับทั้งหมด
+                    <i class="fas fa-folder"></i> หนังสือรับทั้งหมด
                 </a>
                 <a onclick="showExecView('signature')" class="menu-link" id="e_signature">
-                    <i class="fas fa-signature"></i> 3. จัดการลายเซ็น/ตำแหน่ง
+                    <i class="fas fa-signature"></i> จัดการลายเซ็น/ตำแหน่ง
                 </a>
             </div>
             <div class="sidebar-footer">
@@ -278,31 +278,31 @@
                     <form onsubmit="submitRegisterBook(event)">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">1. เลขทะเบียนรับ (ระบบออกให้อัตโนมัติ)</label>
+                                <label class="form-label">เลขทะเบียนรับ (ระบบออกให้อัตโนมัติ)</label>
                                 <input type="text" class="form-control" id="regNum" value="1/2569">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">2. ที่ (เลขที่หนังสือเข้า)</label>
+                                <label class="form-label">ที่ (เลขที่หนังสือเข้า)</label>
                                 <input type="text" class="form-control" id="docNo" required placeholder="เช่น ศธ 04xx/xxxx">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">3. ลงวันที่</label>
+                                <label class="form-label">ลงวันที่</label>
                                 <input type="date" class="form-control" id="docDate" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">4. หนังสือจาก</label>
+                                <label class="form-label">หนังสือจาก</label>
                                 <input type="text" class="form-control" id="docFrom" required placeholder="หน่วยงานที่ส่งมา">
                             </div>
                             <div class="col-12 mb-3">
-                                <label class="form-label">5. เรื่อง</label>
+                                <label class="form-label">เรื่อง</label>
                                 <input type="text" class="form-control" id="subject" required placeholder="ชื่อเรื่องหนังสือ">
                             </div>
                             <div class="col-12 mb-3">
-                                <label class="form-label">6. แนบไฟล์หนังสือ (PDF)</label>
+                                <label class="form-label">แนบไฟล์หนังสือ (PDF)</label>
                                 <input type="file" class="form-control" id="pdfFile" accept="application/pdf" required>
                             </div>
                             <div class="col-12 mb-3">
-                                <label class="form-label">7. การพิมพ์การลงทะเบียนรับบนหัวหนังสือ</label>
+                                <label class="form-label">การพิมพ์การลงทะเบียนรับบนหัวหนังสือ</label>
                                 <select class="form-select" id="stampOption">
                                     <option value="print">พิมพ์ (ประทับตราน้ำเงินอัตโนมัติ)</option>
                                     <option value="noprint">ไม่พิมพ์</option>
