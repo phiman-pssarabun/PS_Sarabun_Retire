@@ -68,27 +68,28 @@
             display: flex; height: calc(100vh - 85px); width: 100%; overflow: hidden;
         }
         .sidebar {
-            width: 300px; background: white; border-right: 1px solid #e2e8f0;
+            width: 280px; background: white; border-right: 1px solid #e2e8f0;
             display: flex; flex-direction: column; flex-shrink: 0; box-shadow: 2px 0 10px rgba(0,0,0,0.02);
         }
         .sidebar-header {
-            padding: 20px; border-bottom: 1px solid #f1f5f9; background: #fff;
+            padding: 12px 15px; border-bottom: 1px solid #f1f5f9; background: #fff; flex-shrink: 0;
         }
         .sidebar-menu {
-            flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px;
+            flex-grow: 1; overflow-y: hidden;
+            padding: 10px; display: flex; flex-direction: column; gap: 4px;
         }
         .menu-link {
-            display: flex; align-items: center; gap: 12px; padding: 12px 16px;
-            color: #475569; text-decoration: none; font-weight: 500; font-size: 0.95rem;
-            border-radius: 12px; transition: all 0.2s; cursor: pointer;
+            display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+            color: #475569; text-decoration: none; font-weight: 500; font-size: 0.88rem;
+            border-radius: 8px; transition: all 0.2s; cursor: pointer;
         }
         .menu-link:hover { background: #f1f5f9; color: var(--primary); }
-        .menu-link.active { background: var(--main-gradient); color: white; font-weight: 600; box-shadow: 0 4px 12px rgba(26,82,118,0.25); }
+        .menu-link.active { background: var(--main-gradient); color: white; font-weight: 600; box-shadow: 0 3px 10px rgba(26,82,118,0.25); }
         .sidebar-footer {
-            padding: 15px; border-top: 1px solid #f1f5f9; background: #fafafa;
+            padding: 10px 15px; border-top: 1px solid #f1f5f9; background: #fafafa; flex-shrink: 0;
         }
         .main-content {
-            flex-grow: 1; overflow-y: auto; padding: 30px; background: var(--bg);
+            flex-grow: 1; overflow-y: auto; padding: 25px; background: var(--bg);
         }
         .form-section {
             background: white; border-radius: 16px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;
@@ -97,8 +98,8 @@
         @media (max-width: 991px) {
             .dashboard-container { flex-direction: column; height: calc(100vh - 85px); overflow-y: auto; }
             .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; }
-            .sidebar-menu { flex-direction: row; overflow-x: auto; padding: 10px; }
-            .menu-link { white-space: nowrap; padding: 8px 12px; font-size: 0.85rem; }
+            .sidebar-menu { flex-direction: row; overflow-x: auto; padding: 8px; gap: 6px; }
+            .menu-link { white-space: nowrap; padding: 6px 10px; font-size: 0.82rem; }
         }
     </style>
 </head>
@@ -133,12 +134,11 @@
         </div>
     </div>
 
-    <!-- 2. หน้าเมนูระบบงานสารบรรณ (Sidebar Layout) -->
+    <!-- 2. หน้าเมนูระบบงานสารบรรณ (Sidebar Layout กระชับ ไม่ต้องเลื่อน) -->
     <div id="sarabunDashboard" class="dashboard-container hidden">
         <div class="sidebar">
             <div class="sidebar-header">
-                <h5 class="text-primary fw-bold mb-1"><i class="fas fa-folder-open"></i> งานสารบรรณ</h5>
-                <small class="text-muted">ระบบสารบรรณโรงเรียน</small>
+                <h6 class="text-primary fw-bold mb-0"><i class="fas fa-folder-open"></i> งานสารบรรณโรงเรียน</h6>
             </div>
             <div class="sidebar-menu">
                 <a onclick="showSarabunView('register')" class="menu-link active" id="s_register">
@@ -158,7 +158,7 @@
                 </a>
             </div>
             <div class="sidebar-footer">
-                <button class="btn btn-outline-danger w-100" onclick="logout()"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
+                <button class="btn btn-outline-danger btn-sm w-100" onclick="logout()"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
             </div>
         </div>
         <div class="main-content">
@@ -166,12 +166,11 @@
         </div>
     </div>
 
-    <!-- 3. หน้าเมนูระบบฝ่ายบริหาร (Sidebar Layout) -->
+    <!-- 3. หน้าเมนูระบบฝ่ายบริหาร (Sidebar Layout กระชับ ไม่ต้องเลื่อน) -->
     <div id="executiveDashboard" class="dashboard-container hidden">
         <div class="sidebar">
             <div class="sidebar-header">
-                <h5 class="text-primary fw-bold mb-1"><i class="fas fa-user-shield"></i> ฝ่ายบริหาร</h5>
-                <small class="text-muted" id="execRoleTitle">ผอ. / รอง ผอ.</small>
+                <h6 class="text-primary fw-bold mb-0"><i class="fas fa-user-shield"></i> ฝ่ายบริหาร</h6>
             </div>
             <div class="sidebar-menu">
                 <a onclick="showExecView('pending')" class="menu-link active" id="e_pending">
@@ -185,7 +184,7 @@
                 </a>
             </div>
             <div class="sidebar-footer">
-                <button class="btn btn-outline-danger w-100" onclick="logout()"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
+                <button class="btn btn-outline-danger btn-sm w-100" onclick="logout()"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
             </div>
         </div>
         <div class="main-content">
@@ -223,9 +222,7 @@
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // ⚠️ เปลี่ยน URL นี้เป็น Google Apps Script Web App URL ของคุณครู
     const API_URL = "https://script.google.com/macros/s/AKfycbwkxGLkR74MyxUwtcrN5JhR9JYjT0MmXa28WauespNxFZMq75tT9s9FUVaoHlqoMIP8/exec";
-
     let currentUser = null;
 
     function openLoginModal(role, title) {
@@ -248,10 +245,10 @@
 
         if (role === 'SARABUN') {
             document.getElementById('sarabunDashboard').classList.remove('hidden');
-            showSarabunView('register'); // เปิดหน้าแรกของสารบรรณอัตโนมัติ
+            showSarabunView('register');
         } else if (role === 'EXECUTIVE') {
             document.getElementById('executiveDashboard').classList.remove('hidden');
-            showExecView('pending'); // เปิดหน้าแรกของฝ่ายบริหารอัตโนมัติ
+            showExecView('pending');
         } else {
             alert('ระบบนี้กำลังอยู่ในระหว่างพัฒนาค่ะ');
             logout();
@@ -268,9 +265,7 @@
         document.getElementById('execContentArea').innerHTML = '';
     }
 
-    // ฟังก์ชันแสดงหน้าย่อยของงานสารบรรณ พร้อมเปลี่ยน Active เมนูซ้าย
     function showSarabunView(view) {
-        // จัดการเปลี่ยน Active class ที่เมนูด้านซ้าย
         document.querySelectorAll('#sarabunDashboard .menu-link').forEach(el => el.classList.remove('active'));
         const activeEl = document.getElementById('s_' + view);
         if(activeEl) activeEl.classList.add('active');
@@ -325,7 +320,6 @@
         }
     }
 
-    // ฟังก์ชันแสดงหน้าย่อยของฝ่ายบริหาร พร้อมเปลี่ยน Active เมนูซ้าย
     function showExecView(view) {
         document.querySelectorAll('#executiveDashboard .menu-link').forEach(el => el.classList.remove('active'));
         const activeEl = document.getElementById('e_' + view);
