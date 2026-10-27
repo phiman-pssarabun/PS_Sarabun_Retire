@@ -420,46 +420,104 @@
         }
     }
 
-    // ฟังก์ชันแปะตราประทับสีน้ำเงินบนหน้าแรกของ PDF โดยตรงทางฝั่งเบราว์เซอร์
-    async function stampPdfClientSide(pdfFile, regNum, timeStr) {
+    // แปลงเลขอารบิกเป็นเลขไทย
+    function toThaiNumber(numStr) {
+        const thaiNums = ['๐','๑','๒','๓','๔','๕','๖','๗','๘','๙'];
+        return String(numStr).replace(/[0-9]/g, w => thaiNums[w]);
+    }
+
+    // แปลงวันที่ YYYY-MM-DD เป็นรูปแบบวันที่ไทย เช่น "๒๑ ตุลาคม ๒๕๖๙"
+    function toThaiDate(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return dateStr;
+        const y = parseInt(parts[0], 10) + 543;
+        const m = parseInt(parts[1], 10);
+        const d = parseInt(parts[2], 10);
+        const months = ["", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+        return `${toThaiNumber(d)} ${months[m]} ${toThaiNumber(y)}`;
+    }
+
+    // ฟังก์ชันวาดตราประทับสีน้ำเงินตามแบบที่แนบมา
+    async function stampPdfClientSide(pdfFile, regNum, dateStr, timeStr) {
         const existingPdfBytes = await pdfFile.arrayBuffer();
         const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
+        
+        // ฝังฟอนต์มาตรฐาน (ใช้ฟอนต์ระบบหรือ Helvetica แทนเพื่อความปลอดภัย) หรือวาดด้วย Canvas เป็นรูปภาพ
         const pages = pdfDoc.getPages();
         const firstPage = pages[0];
         const { width, height } = firstPage.getSize();
 
-        // สร้าง Canvas สำหรับวาดตราประทับสีน้ำเงิน
+        // สร้าง Canvas สำหรับวาดตราประทับสีน้ำเงินความละเอียดสูง
         const canvas = document.createElement('canvas');
-        canvas.width = 340;
-        canvas.height = 130;
+        canvas.width = 460;
+        canvas.height = 180;
         const ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = '#f0f8ff'; // พื้นหลังสีฟ้าอ่อน
+        // พื้นหลังสีขาว/ฟ้าอ่อนสะอาดตา
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.strokeStyle = '#1a5276'; // กรอบสีน้ำเงินเข้ม
+        // กรอบสี่เหลี่ยมขอบคู่สีน้ำเงินเข้ม
+        ctx.strokeStyle = '#1a5276';
         ctx.lineWidth = 4;
-        ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+        ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
 
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+        // ข้อความภายในตราประทับ
         ctx.fillStyle = '#1a5276';
-        ctx.font = 'bold 16px "Prompt", sans-serif';
+        ctx.font = 'bold 22px "Prompt", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', canvas.width / 2, 32);
+        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', canvas.width / 2, 42);
 
-        ctx.font = '14px "Prompt", sans-serif';
+        ctx.font = '19px "Prompt", sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText('เลขรับ: ' + regNum, 20, 70);
-        ctx.fillText('วันที่: ' + timeStr, 20, 102);
+
+        // บรรทัดที่ 2: รับที่
+        ctx.fillText('รับที่', 25, 82);
+        ctx.fillText(toThaiNumber(regNum), 85, 82);
+        ctx.strokeStyle = '#1a5276';
+        ctx.setLineDash([3, 3]); // เส้นประ
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(75, 88);
+        ctx.lineTo(200, 88);
+        ctx.stroke();
+
+        // บรรทัดที่ 3: วันที่
+        ctx.setLineDash([]);
+        ctx.fillText('วันที่', 25, 122);
+        const thaiDateText = toThaiDate(dateStr);
+        ctx.fillText(thaiDateText, 85, 122);
+        ctx.strokeStyle = '#1a5276';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(75, 128);
+        ctx.lineTo(280, 128);
+        ctx.stroke();
+
+        // บรรทัดที่ 4: เวลา
+        ctx.setLineDash([]);
+        ctx.fillText('เวลา', 25, 160);
+        ctx.fillText(toThaiNumber(timeStr), 85, 160);
+        ctx.strokeStyle = '#1a5276';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(75, 166);
+        ctx.lineTo(220, 166);
+        ctx.stroke();
 
         const dataUrl = canvas.toDataURL('image/png');
         const pngImageBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
         const pngImage = await pdfDoc.embedPng(pngImageBytes);
 
-        // วางตราประทับไว้ที่มุมขวาบนของหน้าแรก
-        const stampWidth = 160;
-        const stampHeight = 60;
-        const x = width - stampWidth - 30;
-        const y = height - stampHeight - 30;
+        // วางตราประทับไว้มุมขวาบนของหน้าแรก
+        const stampWidth = 200;
+        const stampHeight = 78;
+        const x = width - stampWidth - 35;
+        const y = height - stampHeight - 35;
 
         firstPage.drawImage(pngImage, {
             x: x,
@@ -480,20 +538,18 @@
         const pdfFileInput = document.getElementById('pdfFile').files[0];
         const regNum = document.getElementById('regNum').value;
         const stampOption = document.getElementById('stampOption').value;
+        const docDate = document.getElementById('docDate').value;
 
         const now = new Date();
-        const timeStr = String(now.getDate()).padStart(2, '0') + '/' + 
-                        String(now.getMonth() + 1).padStart(2, '0') + '/' + 
-                        (now.getFullYear() + 543) + ' ' + 
-                        String(now.getHours()).padStart(2, '0') + ':' + 
-                        String(now.getMinutes()).padStart(2, '0');
+        const timeStr = String(now.getHours()).padStart(2, '0') + ':' + 
+                        String(now.getMinutes()).padStart(2, '0') + ':' + 
+                        String(now.getSeconds()).padStart(2, '0');
 
         let fileToUpload = pdfFileInput;
 
-        // ถ้าเลือกพิมพ์ ให้ทำการประทับตราลงใน PDF ก่อนส่ง
         if (stampOption === 'print') {
             try {
-                fileToUpload = await stampPdfClientSide(pdfFileInput, regNum, timeStr);
+                fileToUpload = await stampPdfClientSide(pdfFileInput, regNum, docDate, timeStr);
             } catch (err) {
                 console.error("Stamping error:", err);
             }
@@ -505,7 +561,7 @@
             action: "registerBook",
             reg_num: regNum,
             doc_no: document.getElementById('docNo').value,
-            doc_date: document.getElementById('docDate').value,
+            doc_date: docDate,
             doc_from: document.getElementById('docFrom').value,
             subject: document.getElementById('subject').value,
             stamp_option: stampOption,
@@ -534,18 +590,25 @@
             const data = await res.json();
 
             if (data.status === 'success' && data.books.length > 0) {
-                let rowsHtml = data.books.map(b => `
-                    <tr>
-                        <td class="text-center"><span class="badge bg-secondary fs-6">${b.reg_num}</span></td>
-                        <td>${b.doc_no}</td>
-                        <td>${b.doc_from}</td>
-                        <td>${b.subject}</td>
-                        <td class="text-center">
-                            <a href="${b.pdf_stamped_url}" target="_blank" class="btn btn-outline-primary btn-sm mb-1"><i class="fas fa-file-pdf"></i> เปิดดูไฟล์</a>
-                            <button class="btn btn-warning btn-sm mb-1 text-dark" onclick="openRetireModal('${b.book_id}')"><i class="fas fa-pen-nib"></i> เกษียณหนังสือ</button>
-                        </td>
-                    </tr>
-                `).join('');
+                let rowsHtml = data.books.map(b => {
+                    // แปลงลิงก์ Google Drive จาก uc?export=view เป็น /preview เพื่อให้คลิกเปิดหน้าอ่านไฟล์ได้ทันทีไม่ต้องดาวน์โหลด
+                    let previewUrl = b.pdf_stamped_url;
+                    if (previewUrl && previewUrl.includes('export=view')) {
+                        previewUrl = previewUrl.replace('uc?export=view', 'preview');
+                    }
+                    return `
+                        <tr>
+                            <td class="text-center"><span class="badge bg-secondary fs-6">${b.reg_num}</span></td>
+                            <td>${b.doc_no}</td>
+                            <td>${b.doc_from}</td>
+                            <td>${b.subject}</td>
+                            <td class="text-center">
+                                <a href="${previewUrl}" target="_blank" class="btn btn-outline-primary btn-sm mb-1"><i class="fas fa-file-pdf"></i> เปิดดูไฟล์</a>
+                                <button class="btn btn-warning btn-sm mb-1 text-dark" onclick="openRetireModal('${b.book_id}')"><i class="fas fa-pen-nib"></i> เกษียณหนังสือ</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
 
                 area.innerHTML = `
                     <div class="form-section">
