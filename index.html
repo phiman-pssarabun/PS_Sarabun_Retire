@@ -11,7 +11,7 @@
 
     <link rel="icon" type="image/png" href="https://github.com/joodami/school-assets/blob/main/PS-SARABUN.png?raw=true">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <!-- เพิ่ม PDF-lib สำหรับแปะตราประทับบนไฟล์ PDF -->
@@ -25,7 +25,7 @@
         }
         body, html {
             height: 100%; margin: 0; padding: 0;
-            font-family: 'Prompt', sans-serif;
+            font-family: 'Sarabun', sans-serif;
             background-color: var(--bg);
             overflow: hidden;
             -webkit-tap-highlight-color: transparent;
@@ -438,75 +438,73 @@
         return `${toThaiNumber(d)} ${months[m]} ${toThaiNumber(y)}`;
     }
 
-    // ฟังก์ชันวาดตราประทับสีน้ำเงินตามแบบที่แนบมา
+    // ฟังก์ชันวาดตราประทับสีน้ำเงินฟอนต์สารบรรณตามรูปตัวอย่างเป๊ะๆ
     async function stampPdfClientSide(pdfFile, regNum, dateStr, timeStr) {
         const existingPdfBytes = await pdfFile.arrayBuffer();
         const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
-        
-        // ฝังฟอนต์มาตรฐาน (ใช้ฟอนต์ระบบหรือ Helvetica แทนเพื่อความปลอดภัย) หรือวาดด้วย Canvas เป็นรูปภาพ
         const pages = pdfDoc.getPages();
         const firstPage = pages[0];
         const { width, height } = firstPage.getSize();
 
-        // สร้าง Canvas สำหรับวาดตราประทับสีน้ำเงินความละเอียดสูง
+        // สร้าง Canvas ความคมชัดสูง
         const canvas = document.createElement('canvas');
-        canvas.width = 460;
-        canvas.height = 180;
+        canvas.width = 500;
+        canvas.height = 200;
         const ctx = canvas.getContext('2d');
 
-        // พื้นหลังสีขาว/ฟ้าอ่อนสะอาดตา
+        // พื้นหลังขาว
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // กรอบสี่เหลี่ยมขอบคู่สีน้ำเงินเข้ม
-        ctx.strokeStyle = '#1a5276';
+        // กรอบสี่เหลี่ยมสีน้ำเงินเข้มตามแบบ
+        ctx.strokeStyle = '#000080'; // น้ำเงินกรมท่า/น้ำเงินเข้ม
         ctx.lineWidth = 4;
-        ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+        ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
 
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+        ctx.fillStyle = '#000080';
 
-        // ข้อความภายในตราประทับ
-        ctx.fillStyle = '#1a5276';
-        ctx.font = 'bold 22px "Prompt", sans-serif';
+        // บรรทัดที่ 1: ชื่อโรงเรียน (ฟอนต์สารบรรณ หนา)
+        ctx.font = 'bold 24px "Sarabun", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', canvas.width / 2, 42);
+        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', canvas.width / 2, 45);
 
-        ctx.font = '19px "Prompt", sans-serif';
+        // ตั้งค่าตัวอักษรสำหรับบรรทัดข้อมูล
+        ctx.font = '20px "Sarabun", sans-serif';
         ctx.textAlign = 'left';
 
         // บรรทัดที่ 2: รับที่
-        ctx.fillText('รับที่', 25, 82);
-        ctx.fillText(toThaiNumber(regNum), 85, 82);
-        ctx.strokeStyle = '#1a5276';
-        ctx.setLineDash([3, 3]); // เส้นประ
-        ctx.lineWidth = 1;
+        ctx.fillText('รับที่', 30, 92);
+        ctx.fillText(toThaiNumber(regNum), 95, 92);
+        // เส้นประใต้ช่องรับที่
+        ctx.strokeStyle = '#000080';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
         ctx.beginPath();
-        ctx.moveTo(75, 88);
-        ctx.lineTo(200, 88);
+        ctx.moveTo(85, 98);
+        ctx.lineTo(240, 98);
         ctx.stroke();
 
         // บรรทัดที่ 3: วันที่
         ctx.setLineDash([]);
-        ctx.fillText('วันที่', 25, 122);
+        ctx.fillText('วันที่', 30, 138);
         const thaiDateText = toThaiDate(dateStr);
-        ctx.fillText(thaiDateText, 85, 122);
-        ctx.strokeStyle = '#1a5276';
-        ctx.setLineDash([3, 3]);
+        ctx.fillText(thaiDateText, 95, 138);
+        ctx.strokeStyle = '#000080';
+        ctx.setLineDash([4, 3]);
         ctx.beginPath();
-        ctx.moveTo(75, 128);
-        ctx.lineTo(280, 128);
+        ctx.moveTo(85, 144);
+        ctx.lineTo(340, 144);
         ctx.stroke();
 
         // บรรทัดที่ 4: เวลา
         ctx.setLineDash([]);
-        ctx.fillText('เวลา', 25, 160);
-        ctx.fillText(toThaiNumber(timeStr), 85, 160);
-        ctx.strokeStyle = '#1a5276';
-        ctx.setLineDash([3, 3]);
+        ctx.fillText('เวลา', 30, 182);
+        ctx.fillText(toThaiNumber(timeStr), 95, 182);
+        ctx.strokeStyle = '#000080';
+        ctx.setLineDash([4, 3]);
         ctx.beginPath();
-        ctx.moveTo(75, 166);
-        ctx.lineTo(220, 166);
+        ctx.moveTo(85, 188);
+        ctx.lineTo(250, 188);
         ctx.stroke();
 
         const dataUrl = canvas.toDataURL('image/png');
@@ -514,8 +512,8 @@
         const pngImage = await pdfDoc.embedPng(pngImageBytes);
 
         // วางตราประทับไว้มุมขวาบนของหน้าแรก
-        const stampWidth = 200;
-        const stampHeight = 78;
+        const stampWidth = 210;
+        const stampHeight = 84;
         const x = width - stampWidth - 35;
         const y = height - stampHeight - 35;
 
@@ -591,10 +589,14 @@
 
             if (data.status === 'success' && data.books.length > 0) {
                 let rowsHtml = data.books.map(b => {
-                    // แปลงลิงก์ Google Drive จาก uc?export=view เป็น /preview เพื่อให้คลิกเปิดหน้าอ่านไฟล์ได้ทันทีไม่ต้องดาวน์โหลด
+                    // แก้ไขลิงก์ Google Drive ให้มีเครื่องหมาย ? นำหน้าพารามิเตอร์ preview อย่างถูกต้อง
                     let previewUrl = b.pdf_stamped_url;
-                    if (previewUrl && previewUrl.includes('export=view')) {
-                        previewUrl = previewUrl.replace('uc?export=view', 'preview');
+                    if (previewUrl) {
+                        if (previewUrl.includes('export=view')) {
+                            previewUrl = previewUrl.replace('uc?export=view', 'preview');
+                        } else if (!previewUrl.includes('preview')) {
+                            previewUrl += (previewUrl.includes('?') ? '&' : '?') + 'preview';
+                        }
                     }
                     return `
                         <tr>
