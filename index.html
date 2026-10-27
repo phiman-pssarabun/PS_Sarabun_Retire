@@ -461,6 +461,9 @@
         ctx.lineWidth = 4;
         ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
 
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
         ctx.fillStyle = '#000080';
 
         // บรรทัดที่ 1: ชื่อโรงเรียน (ฟอนต์สารบรรณ หนา)
@@ -579,6 +582,20 @@
         }
     }
 
+    // ฟังก์ชันแปลงลิงก์ Google Drive ให้เป็นแบบ Preview ที่ถูกต้อง (ดึง File ID มาสร้างลิงก์พรีวิวตรงๆ)
+    function getDrivePreviewUrl(url) {
+        if (!url) return '#';
+        let fileId = '';
+        const match = url.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+            fileId = match[1];
+        }
+        if (fileId) {
+            return `https://drive.google.com/file/d/${fileId}/preview`;
+        }
+        return url;
+    }
+
     async function loadRegisteredBooks() {
         const area = document.getElementById('sarabunContentArea');
         area.innerHTML = `<div class="form-section"><div class="text-center text-muted p-4"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>กำลังโหลดหนังสือรับที่ลงทะเบียนแล้ว...</div></div>`;
@@ -589,15 +606,7 @@
 
             if (data.status === 'success' && data.books.length > 0) {
                 let rowsHtml = data.books.map(b => {
-                    // แก้ไขลิงก์ Google Drive ให้มีเครื่องหมาย ? นำหน้าพารามิเตอร์ preview อย่างถูกต้อง
-                    let previewUrl = b.pdf_stamped_url;
-                    if (previewUrl) {
-                        if (previewUrl.includes('export=view')) {
-                            previewUrl = previewUrl.replace('uc?export=view', 'preview');
-                        } else if (!previewUrl.includes('preview')) {
-                            previewUrl += (previewUrl.includes('?') ? '&' : '?') + 'preview';
-                        }
-                    }
+                    let previewUrl = getDrivePreviewUrl(b.pdf_stamped_url);
                     return `
                         <tr>
                             <td class="text-center"><span class="badge bg-secondary fs-6">${b.reg_num}</span></td>
