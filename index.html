@@ -581,17 +581,27 @@
         }
     }
 
-    // ฟังก์ชันเปิดดูไฟล์ในแท็บใหม่ด้วย Google Drive Viewer แบบออนไลน์ (ไม่ดาวน์โหลด)
-    function openPdfView(url) {
-        if (!url) return;
-        let fileId = '';
-        const match = url.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
-        if (match && match[1]) {
-            fileId = match[1];
-        }
-        const viewUrl = fileId ? `https://drive.google.com/file/d/${fileId}/view?usp=sharing` : url;
-        window.open(viewUrl, '_blank');
+   // ฟังก์ชันเปิดดูไฟล์ในแท็บใหม่ด้วย Google Drive Preview (บังคับแสดงผลบนเว็บ ไม่ดาวน์โหลด)
+function openPdfView(url) {
+    if (!url) {
+        alert('ไม่พบลิงก์ไฟล์เอกสาร');
+        return;
     }
+    let fileId = '';
+    // ดึง File ID ออกมาจากลิงก์ไม่ว่ารูปแบบใด
+    const match = url.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+        fileId = match[1];
+    }
+    
+    if (fileId) {
+        // ใช้ลิงก์ /preview เพื่อบังคับเปิดหน้าโปรแกรมอ่าน PDF ของ Google Drive บนแท็บใหม่ทันที
+        const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+        window.open(previewUrl, '_blank');
+    } else {
+        window.open(url, '_blank');
+    }
+}
 
     async function loadRegisteredBooks() {
         const area = document.getElementById('sarabunContentArea');
