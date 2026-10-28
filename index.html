@@ -484,7 +484,7 @@
         const { width, height } = firstPage.getSize();
 
         const canvas = document.createElement('canvas');
-        canvas.width = 400;
+        canvas.width = 380;
         canvas.height = 190;
         const ctx = canvas.getContext('2d');
 
@@ -506,7 +506,7 @@
         const labelX = 22;
         const valX = 85;
         const lineStartX = 78;
-        const lineEndX = 365;
+        const lineEndX = 350;
 
         ctx.fillText('รับที่', labelX, 86);
         ctx.fillText(toThaiNumber(regNum), valX, 86);
@@ -533,7 +533,7 @@
         const pngImageBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
         const pngImage = await pdfDoc.embedPng(pngImageBytes);
 
-        const stampWidth = 180;
+        const stampWidth = 160;
         const stampHeight = 86;
         const x = width - stampWidth - 30;
         const y = height - stampHeight - 30;
