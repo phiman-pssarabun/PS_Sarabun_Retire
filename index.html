@@ -479,17 +479,17 @@
         ctx.fillStyle = '#000080';
 
         // บรรทัดที่ 1: ชื่อโรงเรียน (ฟอนต์สารบรรณขนาดใหญ่ ชิดซ้าย)
-        ctx.font = 'bold 24px "Sarabun", sans-serif';
+        ctx.font = 'bold 26px "Sarabun", sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', 22, 42);
 
         // บรรทัดที่ 2, 3, 4: เนื้อหา (ขยายฟอนต์ให้ใหญ่ขึ้นชัดเจน ใกล้เคียงขนาดในหนังสือ)
-        ctx.font = '22px "Sarabun", sans-serif';
+        ctx.font = '24px "Sarabun", sans-serif';
 
         const labelX = 22;
         const valX = 85;
         const lineStartX = 78;
-        const lineEndX = 385; // ลดความยาวเส้นประให้ยาวกว่าชื่อโรงเรียนนิดนึงอย่างสวยงาม
+        const lineEndX = 380; // ลดความยาวเส้นประให้ยาวกว่าชื่อโรงเรียนนิดนึงอย่างสวยงาม
 
         // บรรทัดที่ 2: รับที่
         ctx.fillText('รับที่', labelX, 86);
