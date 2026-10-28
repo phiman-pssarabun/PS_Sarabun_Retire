@@ -286,7 +286,7 @@
     let userSignatureData = null;
     let cachedRegisteredBooks = null;
     let pdfPageScale = 1;
-    let activePdfBytes = null; // เก็บข้อมูลไบต์ของ PDF ไว้ใช้ตอนกดบันทึก
+    let activePdfBytes = null;
 
     function openLoginModal(role, title) {
         document.getElementById('loginForm').reset();
@@ -430,7 +430,8 @@
         }
     }
 
-    function getDirectImageUrl(url) {
+    // ฟังก์ชันแปลงลิงก์ Drive ให้เป็นลิงก์ภาพ/ไฟล์ดิบ (Direct Link) ที่ใช้แสดงผลและโหลดได้สมบูรณ์
+    function getDirectUrl(url) {
         if (!url) return '';
         const match = url.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
         if (match && match[1]) {
@@ -442,7 +443,7 @@
     async function renderSignatureForm() {
         await fetchSignatureStatus();
         const area = document.getElementById('sarabunContentArea');
-        const directSigUrl = userSignatureData && userSignatureData.signature_png_url ? getDirectImageUrl(userSignatureData.signature_png_url) : '';
+        const directSigUrl = userSignatureData && userSignatureData.signature_png_url ? getDirectUrl(userSignatureData.signature_png_url) : '';
 
         area.innerHTML = `
             <div class="form-section">
@@ -657,7 +658,7 @@
         const area = document.getElementById('sarabunContentArea');
         if (!cachedRegisteredBooks || forceRefresh) {
             if (!forceRefresh) {
-                area.innerHTML = `<div class="form-section"><div class="text-center text-muted p-4"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>กำลังโหลดข้อมูล...</div></div>`;
+                area.innerHTML = `<div class="form-section"><div class="text-center text-muted p-4"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>กำลังโหลดข้อมูลหนังสือ...</div></div>`;
             }
             try {
                 const res = await fetch(`${API_URL}?action=getBooks&status=REGISTERED`);
@@ -770,7 +771,8 @@
 
         document.getElementById('retireBookId').value = bookId;
         document.getElementById('retirePdfUrl').value = pdfUrl;
-        const directSigUrl = getDirectImageUrl(userSignatureData.signature_png_url);
+        
+        const directSigUrl = getDirectUrl(userSignatureData.signature_png_url);
         document.getElementById('previewSignatureImg').src = directSigUrl;
         document.getElementById('previewSignatureImg').style.display = 'inline-block';
         document.getElementById('previewPositionText').innerText = userSignatureData.default_position_text;
@@ -787,16 +789,15 @@
         loadingIndicator.style.display = 'block';
         marker.style.display = 'none';
 
-        let fileId = '';
-        const match = url.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
-        if (match && match[1]) fileId = match[1];
-
-        // ใช้ Google Drive Download Link ตรงๆ เพื่อให้โหลดพรีวิวได้สมบูรณ์
-        const fetchUrl = fileId ? `https://drive.google.com/uc?export=download&id=${fileId}` : url;
+        // แปลงลิงก์ PDF ให้เป็นลิงก์ดาวน์โหลดดิบ (Direct Download Link)
+        let directUrl = getDirectUrl(url);
+        if (directUrl.includes('export=view')) {
+            directUrl = directUrl.replace('export=view', 'export=download');
+        }
 
         try {
-            const response = await fetch(fetchUrl);
-            activePdfBytes = await response.arrayBuffer(); // เก็บไบต์ไว้ใช้ตอนบันทึก
+            const response = await fetch(directUrl);
+            activePdfBytes = await response.arrayBuffer();
 
             const loadingTask = pdfjsLib.getDocument({ data: activePdfBytes });
             const pdfDoc = await loadingTask.promise;
@@ -821,7 +822,7 @@
 
         } catch (err) {
             console.error("PDF Preview Error:", err);
-            loadingIndicator.innerText = 'เกิดข้อผิดพลาดในการโหลดพรีวิว PDF';
+            loadingIndicator.innerText = 'ไม่สามารถโหลดพรีวิว PDF ได้ (เนื่องจากนโยบายความปลอดภัยเบราว์เซอร์)';
         }
     }
 
@@ -877,7 +878,7 @@
 
             // ฝังรูปลายเซ็น
             if (userSignatureData && userSignatureData.signature_png_url) {
-                const sigDirectUrl = getDirectImageUrl(userSignatureData.signature_png_url);
+                const sigDirectUrl = getDirectUrl(userSignatureData.signature_png_url);
                 const sigImageBytes = await fetch(sigDirectUrl).then(res => res.arrayBuffer());
                 const sigImage = await pdfDoc.embedPng(sigImageBytes);
                 
