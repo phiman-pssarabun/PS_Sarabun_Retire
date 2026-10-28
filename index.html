@@ -454,7 +454,7 @@
         return `${toThaiNumber(d)} ${months[m]} ${toThaiNumber(y)}`;
     }
 
-    // ฟังก์ชันวาดตราประทับสีน้ำเงินตามรูปตัวอย่างที่แนบมาเป๊ะๆ (ขนาดกระชับ ตัวอักษรสมส่วน เส้นประเท่ากันทุกบรรทัด)
+    // ฟังก์ชันวาดตราประทับสีน้ำเงิน: ปรับฟอนต์ให้ใหญ่ขึ้นใกล้เคียงต้นฉบับ และลดความยาวเส้นประให้ยาวกว่าชื่อโรงเรียนนิดหน่อย
     async function stampPdfClientSide(pdfFile, regNum, dateStr, timeStr) {
         const existingPdfBytes = await pdfFile.arrayBuffer();
         const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
@@ -463,8 +463,8 @@
         const { width, height } = firstPage.getSize();
 
         const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = 160;
+        canvas.width = 460;
+        canvas.height = 190;
         const ctx = canvas.getContext('2d');
 
         // พื้นหลังขาว
@@ -473,43 +473,43 @@
 
         // กรอบสี่เหลี่ยมเส้นเดียว สีน้ำเงินเข้ม (#000080)
         ctx.strokeStyle = '#000080';
-        ctx.lineWidth = 2.5;
-        ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+        ctx.lineWidth = 3;
+        ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
 
         ctx.fillStyle = '#000080';
 
-        // บรรทัดที่ 1: ชื่อโรงเรียน (ฟอนต์สารบรรณ ขนาดกำลังดี ชิดซ้าย)
-        ctx.font = 'bold 20px "Sarabun", sans-serif';
+        // บรรทัดที่ 1: ชื่อโรงเรียน (ฟอนต์สารบรรณขนาดใหญ่ ชิดซ้าย)
+        ctx.font = 'bold 24px "Sarabun", sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', 20, 36);
+        ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', 22, 42);
 
-        // บรรทัดที่ 2, 3, 4: เนื้อหา (ขนาดใกล้เคียงหนังสือรับ 18px สมส่วน)
-        ctx.font = '18px "Sarabun", sans-serif';
+        // บรรทัดที่ 2, 3, 4: เนื้อหา (ขยายฟอนต์ให้ใหญ่ขึ้นชัดเจน ใกล้เคียงขนาดในหนังสือ)
+        ctx.font = '22px "Sarabun", sans-serif';
 
-        const labelX = 20;
-        const valX = 65;
-        const lineStartX = 62;
-        const lineEndX = canvas.width - 20; // เส้นประความยาวเท่ากันพอดี
+        const labelX = 22;
+        const valX = 85;
+        const lineStartX = 78;
+        const lineEndX = 385; // ลดความยาวเส้นประให้ยาวกว่าชื่อโรงเรียนนิดนึงอย่างสวยงาม
 
         // บรรทัดที่ 2: รับที่
-        ctx.fillText('รับที่', labelX, 74);
-        ctx.fillText(toThaiNumber(regNum), valX, 74);
+        ctx.fillText('รับที่', labelX, 86);
+        ctx.fillText(toThaiNumber(regNum), valX, 86);
 
         // บรรทัดที่ 3: วันที่
-        ctx.fillText('วันที่', labelX, 112);
+        ctx.fillText('วันที่', labelX, 132);
         const thaiDateText = toThaiDate(dateStr);
-        ctx.fillText(thaiDateText, valX, 112);
+        ctx.fillText(thaiDateText, valX, 132);
 
         // บรรทัดที่ 4: เวลา
-        ctx.fillText('เวลา', labelX, 144);
-        ctx.fillText(toThaiNumber(timeStr), valX, 144);
+        ctx.fillText('เวลา', labelX, 172);
+        ctx.fillText(toThaiNumber(timeStr), valX, 172);
 
-        // วาดเส้นประให้มีความยาวเท่ากันทุกบรรทัดอย่างเป็นระเบียบ
+        // วาดเส้นประให้มีความยาวเท่ากันทุกบรรทัด
         ctx.strokeStyle = '#000080';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.2;
         ctx.setLineDash([3, 3]);
 
-        [80, 118, 150].forEach(yPos => {
+        [93, 139, 179].forEach(yPos => {
             ctx.beginPath();
             ctx.moveTo(lineStartX, yPos);
             ctx.lineTo(lineEndX, yPos);
@@ -521,8 +521,8 @@
         const pngImage = await pdfDoc.embedPng(pngImageBytes);
 
         // วางตราประทับไว้มุมขวาบนของหน้าแรก
-        const stampWidth = 190;
-        const stampHeight = 76;
+        const stampWidth = 210;
+        const stampHeight = 86;
         const x = width - stampWidth - 30;
         const y = height - stampHeight - 30;
 
@@ -619,9 +619,11 @@
             const data = await res.json();
 
             if (data.status === 'success' && data.books.length > 0) {
+                // เรียงลำดับจากหนังสือรับล่าสุด (เลขทะเบียนรับมากสุด) ไว้ด้านบน
+                const totalBooks = data.books.sort((a, b) => parseInt(b.reg_num, 10) - parseInt(a.reg_num, 10));
+                
                 // กำหนดการแสดงผลหน้าละ 20 เรื่อง
                 const pageSize = 20;
-                const totalBooks = data.books;
                 const totalPages = Math.ceil(totalBooks.length / pageSize);
                 window.currentBookPage = window.currentBookPage || 1;
                 if(window.currentBookPage > totalPages) window.currentBookPage = 1;
