@@ -14,8 +14,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- เพิ่ม PDF-lib สำหรับแปะตราประทับบนไฟล์ PDF -->
+    <!-- เพิ่ม PDF-lib และ PDF.js สำหรับจัดการและเรนเดอร์ PDF บนหน้าเว็บ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
 
     <style>
         :root {
@@ -87,6 +91,30 @@
         @keyframes indeterminate {
             0% { left: -40%; }
             100% { left: 100%; }
+        }
+
+        /* สไตล์สำหรับกล่องคลิกเลือกตำแหน่งบนหน้า PDF */
+        #pdfCanvasContainer {
+            position: relative;
+            display: inline-block;
+            cursor: crosshair;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            max-width: 100%;
+            overflow: auto;
+        }
+        #clickMarker {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: rgba(239, 68, 68, 0.8);
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            display: none;
+            zIndex: 10;
         }
 
         @media (max-width: 991px) {
@@ -212,29 +240,47 @@
     </div>
 </div>
 
-<!-- Modal เกษียณหนังสือ -->
+<!-- Modal เกษียณหนังสือแบบคลิกเลือกพิกัดบนหน้า PDF -->
 <div class="modal fade" id="retireModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="fas fa-pen-nib"></i> เกษียณหนังสือเสนอฝ่ายบริหาร</h5>
+                <h5 class="modal-title"><i class="fas fa-pen-nib"></i> เกษียณหนังสือและเลือกตำแหน่งวางบนหน้า PDF</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="retireBookId">
-                <div class="mb-3">
-                    <label class="form-label fw-bold">ข้อความเกษียณหนังสือ</label>
-                    <textarea class="form-control" id="retireText" rows="3" placeholder="กรอกข้อความเสนอพิจารณา..." required>เรียน ผู้อำนวยการเพื่อโปรดพิจารณา</textarea>
-                </div>
-                <div class="p-3 bg-light rounded border text-center">
-                    <div class="fw-bold mb-2">ตัวอย่างลายเซ็นที่จะแสดงบนเอกสาร</div>
-                    <img id="previewSignatureImg" src="" style="max-height: 80px; display: none;" alt="Signature Preview">
-                    <div id="previewPositionText" class="mt-2 text-muted small"></div>
+                <input type="hidden" id="retirePdfUrl">
+                <input type="hidden" id="clickPdfX" value="100">
+                <input type="hidden" id="clickPdfY" value="100">
+
+                <div class="row">
+                    <div class="col-md-5">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">1. ข้อความเกษียณหนังสือ</label>
+                            <textarea class="form-control form-control-sm" id="retireText" rows="3" required>เรียน ผู้อำนวยการเพื่อโปรดพิจารณา</textarea>
+                        </div>
+                        <div class="p-3 bg-light rounded border text-center mb-3">
+                            <div class="fw-bold small mb-2 text-primary">ตัวอย่างลายเซ็นที่จะใช้ประทับ</div>
+                            <img id="previewSignatureImg" src="" style="max-height: 70px; display: none;" alt="Signature Preview">
+                            <div id="previewPositionText" class="mt-2 text-muted small"></div>
+                        </div>
+                        <div class="alert alert-info small mb-0">
+                            <i class="fas fa-info-circle"></i> <b>วิธีใช้งาน:</b> กรอกข้อความเกษียณ แล้วใช้เมาส์ <b>คลิกเลือกตำแหน่ง</b> บนหน้าเอกสาร PDF ทางด้านขวา จุดสีแดงจะแสดงตำแหน่งที่จะประทับ จากนั้นกดปุ่มยืนยันด้านล่างครับ
+                        </div>
+                    </div>
+                    <div class="col-md-7 text-center bg-dark p-2 rounded d-flex flex-column align-items-center justify-content-center" style="min-height: 400px; max-height: 70vh; overflow: auto;">
+                        <div id="pdfLoadingIndicator" class="text-white small mb-2"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดหน้าเอกสาร...</div>
+                        <div id="pdfCanvasContainer" onclick="handlePdfCanvasClick(event)">
+                            <canvas id="pdfPreviewCanvas"></canvas>
+                            <div id="clickMarker"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
-                <button type="button" class="btn btn-success btn-sm" onclick="confirmRetireBook()"><i class="fas fa-paper-plane"></i> บันทึกและส่ง ผอ.</button>
+                <button type="button" class="btn btn-success btn-sm" id="confirmRetireBtn" onclick="confirmRetireBook()"><i class="fas fa-paper-plane"></i> ยืนยันเกษียณและบันทึกทับไฟล์เดิม</button>
             </div>
         </div>
     </div>
@@ -246,9 +292,8 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbwkxGLkR74MyxUwtcrN5JhR9JYjT0MmXa28WauespNxFZMq75tT9s9FUVaoHlqoMIP8/exec";
     let currentUser = null;
     let userSignatureData = null;
-    
-    // ตัวแปรส่วนกลางสำหรับเก็บข้อมูลแคช (Cache) ไว้ในหน่วยความจำหน้าเว็บ
     let cachedRegisteredBooks = null;
+    let pdfPageScale = 1;
 
     function openLoginModal(role, title) {
         document.getElementById('loginForm').reset();
@@ -271,10 +316,7 @@
         if (role === 'SARABUN') {
             document.getElementById('sarabunDashboard').classList.remove('hidden');
             await fetchSignatureStatus();
-            
-            // โหลดข้อมูลแคชล่วงหน้าทันทีเมื่อล็อกอิน
             preloadRegisteredBooksCache();
-            
             showSarabunView('register');
         } else if (role === 'EXECUTIVE') {
             document.getElementById('executiveDashboard').classList.remove('hidden');
@@ -311,7 +353,6 @@
         }
     }
 
-    // ฟังก์ชันแอบโหลดข้อมูลล่วงหน้าเบื้องหลัง
     async function preloadRegisteredBooksCache() {
         try {
             const res = await fetch(`${API_URL}?action=getBooks&status=REGISTERED`);
@@ -396,9 +437,21 @@
         }
     }
 
+    // แปลง Google Drive URL เป็นรูปแบบพรีวิวรูปภาพตรง
+    function getDirectImageUrl(url) {
+        if (!url) return '';
+        const match = url.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+            return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+        }
+        return url;
+    }
+
     async function renderSignatureForm() {
         await fetchSignatureStatus();
         const area = document.getElementById('sarabunContentArea');
+        const directSigUrl = userSignatureData && userSignatureData.signature_png_url ? getDirectImageUrl(userSignatureData.signature_png_url) : '';
+
         area.innerHTML = `
             <div class="form-section">
                 <h6 class="text-primary fw-bold mb-3"><i class="fas fa-signature"></i> จัดการลายเซ็นและข้อความตำแหน่ง</h6>
@@ -412,12 +465,12 @@
                         <label class="form-label small fw-bold">2. ข้อความตำแหน่งประจำตัว</label>
                         <input type="text" class="form-control form-control-sm" id="posTextInput" placeholder="เช่น เจ้าหน้าที่งานสารบรรณ โรงเรียนพิมานพิทยาสรรค์" required value="${userSignatureData && userSignatureData.default_position_text ? userSignatureData.default_position_text : ''}">
                     </div>
-                    ${userSignatureData && userSignatureData.signature_png_url ? `
+                    ${directSigUrl ? `
                         <div class="mb-3">
                             <label class="form-label small fw-bold d-block">ลายเซ็นที่บันทึกไว้ปัจจุบัน:</label>
-                            <img src="${userSignatureData.signature_png_url}" style="max-height: 70px;" class="border p-1 bg-white rounded">
+                            <img src="${directSigUrl}" style="max-height: 80px;" class="border p-1 bg-white rounded shadow-sm">
                         </div>
-                    ` : ''}
+                    ` : '<div class="text-muted small mb-3">ยังไม่มีการบันทึกรูปลายเซ็นในระบบ</div>'}
                     <button type="submit" class="btn btn-primary btn-sm" id="saveSigBtn"><i class="fas fa-save"></i> บันทึกข้อมูลตำแหน่ง/ลายเซ็น</button>
                 </form>
             </div>`;
@@ -457,13 +510,11 @@
         }
     }
 
-    // แปลงเลขอารบิกเป็นเลขไทย
     function toThaiNumber(numStr) {
         const thaiNums = ['๐','๑','๒','๓','๔','๕','๖','๗','๘','๙'];
         return String(numStr).replace(/[0-9]/g, w => thaiNums[w]);
     }
 
-    // แปลงวันที่ YYYY-MM-DD เป็นรูปแบบวันที่ไทย เช่น "๒๑ ตุลาคม ๒๕๖๙"
     function toThaiDate(dateStr) {
         if (!dateStr) return '';
         const parts = dateStr.split('-');
@@ -475,7 +526,6 @@
         return `${toThaiNumber(d)} ${months[m]} ${toThaiNumber(y)}`;
     }
 
-    // ฟังก์ชันวาดตราประทับสีน้ำเงิน
     async function stampPdfClientSide(pdfFile, regNum, dateStr, timeStr) {
         const existingPdfBytes = await pdfFile.arrayBuffer();
         const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
@@ -484,7 +534,7 @@
         const { width, height } = firstPage.getSize();
 
         const canvas = document.createElement('canvas');
-        canvas.width = 400;
+        canvas.width = 460;
         canvas.height = 190;
         const ctx = canvas.getContext('2d');
 
@@ -496,17 +546,15 @@
         ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
 
         ctx.fillStyle = '#000080';
-
-        ctx.font = 'bold 26px "Sarabun", sans-serif';
+        ctx.font = 'bold 24px "Sarabun", sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', 22, 42);
 
-        ctx.font = '24px "Sarabun", sans-serif';
-
+        ctx.font = '22px "Sarabun", sans-serif';
         const labelX = 22;
         const valX = 85;
         const lineStartX = 78;
-        const lineEndX = 365;
+        const lineEndX = 385;
 
         ctx.fillText('รับที่', labelX, 86);
         ctx.fillText(toThaiNumber(regNum), valX, 86);
@@ -533,17 +581,12 @@
         const pngImageBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
         const pngImage = await pdfDoc.embedPng(pngImageBytes);
 
-        const stampWidth = 180;
+        const stampWidth = 210;
         const stampHeight = 86;
         const x = width - stampWidth - 30;
         const y = height - stampHeight - 30;
 
-        firstPage.drawImage(pngImage, {
-            x: x,
-            y: y,
-            width: stampWidth,
-            height: stampHeight,
-        });
+        firstPage.drawImage(pngImage, { x, y, width: stampWidth, height: stampHeight });
 
         const pdfBytes = await pdfDoc.save();
         return new Blob([pdfBytes], { type: 'application/pdf' });
@@ -592,19 +635,14 @@
         };
 
         try {
-            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
-            const data = await res.json();
-            
-            // ล้างแคชเพื่อให้ดึงข้อมูลใหม่รอบหน้า
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
             cachedRegisteredBooks = null;
-            
             document.getElementById('registerBookForm').reset();
             const nextRes = await fetch(`${API_URL}?action=getNextRegNum`);
             const nextData = await nextRes.json();
             if (nextData.status === 'success') {
                 document.getElementById('regNum').value = nextData.next_reg_num;
             }
-            
             preloadRegisteredBooksCache();
         } catch (err) {
             alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
@@ -625,14 +663,10 @@
         window.open(viewUrl, '_blank');
     }
 
-    // ฟังก์ชันแสดงรายการหนังสือรับ (เปิดปุ๊บแสดงข้อมูลจากแคชทันทีแบบไม่หมุนโหลดซ้ำ)
     async function loadRegisteredBooks(forceRefresh = false) {
         const area = document.getElementById('sarabunContentArea');
-        
-        // ถ้าสั่งรีเฟรชบังคับ หรือยังไม่มีแคชเลย ให้ดึงใหม่
         if (!cachedRegisteredBooks || forceRefresh) {
             if (!forceRefresh) {
-                // หากไม่มีข้อมูลในแคชเลย ให้แสดงตัวหมุนเฉพาะตอนเปิดครั้งแรกสุดเท่านั้น
                 area.innerHTML = `<div class="form-section"><div class="text-center text-muted p-4"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>กำลังโหลดข้อมูล...</div></div>`;
             }
             try {
@@ -646,17 +680,10 @@
                 return;
             }
         }
-
-        // แสดงตารางทันทีจากแคชที่มีอยู่
         renderRegisteredBooksTable(cachedRegisteredBooks);
-
-        // แอบซิงค์ข้อมูลใหม่เงียบ ๆ เบื้องหลัง (ถ้ามีข้อมูลอัปเดต ระบบจะสลับมาใช้ข้อมูลใหม่ให้เองทันที)
-        if (!forceRefresh) {
-            backgroundSyncRegisteredBooks();
-        }
+        if (!forceRefresh) backgroundSyncRegisteredBooks();
     }
 
-    // ฟังก์ชันแอบซิงค์ข้อมูลใหม่เงียบ ๆ เบื้องหลัง
     async function backgroundSyncRegisteredBooks() {
         try {
             const res = await fetch(`${API_URL}?action=getBooks&status=REGISTERED`);
@@ -674,13 +701,11 @@
         }
     }
 
-    // เรนเดอร์ตาราง
     function renderRegisteredBooksTable(books) {
         const area = document.getElementById('sarabunContentArea');
         
         if (books && books.length > 0) {
             const totalBooks = [...books].sort((a, b) => parseInt(b.reg_num, 10) - parseInt(a.reg_num, 10));
-            
             const pageSize = 20;
             const totalPages = Math.ceil(totalBooks.length / pageSize);
             window.currentBookPage = window.currentBookPage || 1;
@@ -698,7 +723,7 @@
                         <td>${b.subject}</td>
                         <td class="text-center">
                             <button onclick="openPdfView('${b.pdf_stamped_url}')" class="btn btn-outline-primary btn-sm py-0 px-2 mb-1" style="font-size: 0.8rem;"><i class="fas fa-file-pdf"></i> เปิดดู</button>
-                            <button class="btn btn-warning btn-sm py-0 px-2 mb-1 text-dark" style="font-size: 0.8rem;" onclick="openRetireModal('${b.book_id}')"><i class="fas fa-pen-nib"></i> เกษียณ</button>
+                            <button class="btn btn-warning btn-sm py-0 px-2 mb-1 text-dark" style="font-size: 0.8rem;" onclick="openRetireModal('${b.book_id}', '${b.pdf_stamped_url}')"><i class="fas fa-pen-nib"></i> เกษียณ</button>
                         </td>
                     </tr>
                 `;
@@ -745,7 +770,8 @@
         renderRegisteredBooksTable(cachedRegisteredBooks);
     }
 
-    async function openRetireModal(bookId) {
+    // 📌 ฟังก์ชันเปิด Modal เกษียณและเรนเดอร์ PDF หน้าแรกให้คลิกเลือกพิกัด
+    async function openRetireModal(bookId, pdfUrl) {
         await fetchSignatureStatus();
         if (!userSignatureData || !userSignatureData.signature_png_url) {
             alert('❌ ไม่สามารถเกษียณหนังสือได้!\nกรุณาไปบันทึกลายเซ็นในเมนู "จัดการลายเซ็น/ตำแหน่ง" ก่อนนะคะ');
@@ -754,33 +780,167 @@
         }
 
         document.getElementById('retireBookId').value = bookId;
-        document.getElementById('previewSignatureImg').src = userSignatureData.signature_png_url;
+        document.getElementById('retirePdfUrl').value = pdfUrl;
+        const directSigUrl = getDirectImageUrl(userSignatureData.signature_png_url);
+        document.getElementById('previewSignatureImg').src = directSigUrl;
         document.getElementById('previewSignatureImg').style.display = 'inline-block';
         document.getElementById('previewPositionText').innerText = userSignatureData.default_position_text;
-        
-        new bootstrap.Modal(document.getElementById('retireModal')).show();
+
+        // เปิด Modal
+        const modal = new bootstrap.Modal(document.getElementById('retireModal'));
+        modal.show();
+
+        // เรนเดอร์ PDF บน Canvas ด้วย PDF.js
+        await renderPdfPreviewOnCanvas(pdfUrl);
     }
 
+    async function renderPdfPreviewOnCanvas(url) {
+        const loadingIndicator = document.getElementById('pdfLoadingIndicator');
+        const marker = document.getElementById('clickMarker');
+        loadingIndicator.style.display = 'block';
+        marker.style.display = 'none';
+
+        let fileId = '';
+        const match = url.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) fileId = match[1];
+
+        // ดึงไฟล์ PDF ผ่าน Proxy / Google Drive URL
+        const fetchUrl = fileId ? `https://drive.google.com/uc?export=download&id=${fileId}` : url;
+
+        try {
+            const loadingTask = pdfjsLib.getDocument(fetchUrl);
+            const pdfDoc = await loadingTask.promise;
+            const page = await pdfDoc.getPage(1);
+
+            const viewport = page.getViewport({ scale: 1.2 });
+            pdfPageScale = 1.2;
+
+            const canvas = document.getElementById('pdfPreviewCanvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+
+            await page.render(renderContext).promise;
+            loadingIndicator.style.display = 'none';
+
+            // ตั้งค่าจุดเริ่มต้นพิกัดตรงกลางหน้ากระดาษ
+            document.getElementById('clickPdfX').value = viewport.width / 2;
+            document.getElementById('clickPdfY').value = 100;
+            marker.style.left = (viewport.width / 2) + 'px';
+            marker.style.top = '100px';
+            marker.style.display = 'block';
+
+        } catch (err) {
+            console.error("PDF Preview Error:", err);
+            loadingIndicator.innerText = 'ไม่สามารถโหลดพรีวิว PDF ได้ (สามารถคลิกยืนยันเพื่อเกษียณได้ปกติ)';
+        }
+    }
+
+    // ฟังก์ชันรับตำแหน่งคลิกเมาส์บนหน้า PDF Canvas
+    function handlePdfCanvasClick(event) {
+        const canvas = document.getElementById('pdfPreviewCanvas');
+        const rect = canvas.getBoundingClientRect();
+        const marker = document.getElementById('clickMarker');
+
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        marker.style.left = x + 'px';
+        marker.style.top = y + 'px';
+        marker.style.display = 'block';
+
+        document.getElementById('clickPdfX').value = x;
+        document.getElementById('clickPdfY').value = y;
+    }
+
+    // 📌 ยืนยันการเกษียณ: แปะข้อความและลายเซ็นลงบนพิกัดที่คลิก ทับไฟล์ PDF เดิม
     async function confirmRetireBook() {
         const bookId = document.getElementById('retireBookId').value;
         const retireText = document.getElementById('retireText').value;
+        const pdfUrl = document.getElementById('retirePdfUrl').value;
+        
+        // อ่านพิกัดที่คลิก (แปลงสเกลกลับเป็นพิกัดจริงของ PDF)
+        const clickX = parseFloat(document.getElementById('clickPdfX').value) / pdfPageScale;
+        const clickY = parseFloat(document.getElementById('clickPdfY').value) / pdfPageScale;
 
-        const payload = {
-            action: "retireBook",
-            book_id: bookId,
-            retire_text: retireText
-        };
+        const btn = document.getElementById('confirmRetireBtn');
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> กำลังประมวลผลและบันทึกทับไฟล์เดิม...`;
 
         try {
+            // โหลดไฟล์ PDF เดิมจาก Drive
+            let fileId = '';
+            const match = pdfUrl.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) fileId = match[1];
+            const fetchUrl = fileId ? `https://drive.google.com/uc?export=download&id=${fileId}` : pdfUrl;
+
+            const existingPdfBytes = await fetch(fetchUrl).then(res => res.arrayBuffer());
+            const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
+            const pages = pdfDoc.getPages();
+            const firstPage = pages[0];
+            const { width, height } = firstPage.getSize();
+
+            // คำนวณพิกัด Y ของ PDF (PDF นับ Y จากล่างขึ้นบน ต่างจากหน้าจอที่นับจากบนลงล่าง)
+            const pdfX = clickX;
+            const pdfY = height - clickY;
+
+            // โหลดฟอนต์ภาษาไทยมาตรฐานหรือ embed ข้อความเกษียณ
+            const helveticaFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+            
+            // วาดข้อความเกษียณลงบนพิกัด
+            firstPage.drawText(retireText, {
+                x: pdfX,
+                y: pdfY,
+                size: 14,
+                font: helveticaFont,
+                color: PDFLib.rgb(0, 0, 0.5),
+            });
+
+            // ถ้ารูป Lun / ลายเซ็นมี ให้แปะรูปด้วย
+            if (userSignatureData && userSignatureData.signature_png_url) {
+                const sigDirectUrl = getDirectImageUrl(userSignatureData.signature_png_url);
+                const sigImageBytes = await fetch(sigDirectUrl).then(res => res.arrayBuffer());
+                const sigImage = await pdfDoc.embedPng(sigImageBytes);
+                
+                firstPage.drawImage(sigImage, {
+                    x: pdfX,
+                    y: pdfY - 50,
+                    width: 100,
+                    height: 40
+                });
+            }
+
+            const pdfBytes = await pdfDoc.save();
+            const pdfBase64 = "data:application/pdf;base64," + btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
+
+            // ส่งข้อมูลอัปเดตสถานะและไฟล์ทับเดิมไปยัง GAS
+            const payload = {
+                action: "retireBook",
+                book_id: bookId,
+                retire_text: retireText,
+                pdf_base64: pdfBase64
+            };
+
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
             const data = await res.json();
+            
             alert(data.message);
             bootstrap.Modal.getInstance(document.getElementById('retireModal')).hide();
             
             cachedRegisteredBooks = null;
             loadRegisteredBooks(true);
+
         } catch (err) {
-            alert('เกิดข้อผิดพลาดในการเกษียณหนังสือ');
+            console.error("Retire error:", err);
+            alert('เกิดข้อผิดพลาดในการเกษียณหนังสือ กรุณาลองใหม่อีกครั้ง');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-paper-plane"></i> ยืนยันเกษียณและบันทึกทับไฟล์เดิม`;
         }
     }
 
