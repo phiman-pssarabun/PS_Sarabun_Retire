@@ -484,7 +484,7 @@
         const { width, height } = firstPage.getSize();
 
         const canvas = document.createElement('canvas');
-        canvas.width = 460;
+        canvas.width = 420;
         canvas.height = 190;
         const ctx = canvas.getContext('2d');
 
@@ -497,16 +497,16 @@
 
         ctx.fillStyle = '#000080';
 
-        ctx.font = 'bold 24px "Sarabun", sans-serif';
+        ctx.font = 'bold 26px "Sarabun", sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', 22, 42);
 
-        ctx.font = '22px "Sarabun", sans-serif';
+        ctx.font = '24px "Sarabun", sans-serif';
 
         const labelX = 22;
         const valX = 85;
         const lineStartX = 78;
-        const lineEndX = 385;
+        const lineEndX = 375;
 
         ctx.fillText('รับที่', labelX, 86);
         ctx.fillText(toThaiNumber(regNum), valX, 86);
@@ -533,7 +533,7 @@
         const pngImageBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
         const pngImage = await pdfDoc.embedPng(pngImageBytes);
 
-        const stampWidth = 210;
+        const stampWidth = 190;
         const stampHeight = 86;
         const x = width - stampWidth - 30;
         const y = height - stampHeight - 30;
