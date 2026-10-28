@@ -272,7 +272,7 @@
             document.getElementById('sarabunDashboard').classList.remove('hidden');
             await fetchSignatureStatus();
             
-            // โหลดข้อมูลแคชล่วงหน้า (Preload) ทันทีที่ล็อกอินสำเร็จ
+            // โหลดข้อมูลแคชล่วงหน้าทันทีเมื่อล็อกอิน
             preloadRegisteredBooksCache();
             
             showSarabunView('register');
@@ -311,7 +311,7 @@
         }
     }
 
-    // ฟังก์ชันแอบโหลดข้อมูล (Preload Cache) ไว้ล่วงหน้า
+    // ฟังก์ชันแอบโหลดข้อมูลล่วงหน้าเบื้องหลัง
     async function preloadRegisteredBooksCache() {
         try {
             const res = await fetch(`${API_URL}?action=getBooks&status=REGISTERED`);
@@ -475,7 +475,7 @@
         return `${toThaiNumber(d)} ${months[m]} ${toThaiNumber(y)}`;
     }
 
-    // ฟังก์ชันวาดตราประทับสีน้ำเงิน (ฟอนต์ใหญ่ใกล้เคียงต้นฉบับ เส้นประพอดีชื่อโรงเรียน)
+    // ฟังก์ชันวาดตราประทับสีน้ำเงิน
     async function stampPdfClientSide(pdfFile, regNum, dateStr, timeStr) {
         const existingPdfBytes = await pdfFile.arrayBuffer();
         const pdfDoc = await PDFLib.PDFDocument.load(existingPdfBytes);
@@ -488,23 +488,19 @@
         canvas.height = 190;
         const ctx = canvas.getContext('2d');
 
-        // พื้นหลังขาว
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // กรอบสี่เหลี่ยมเส้นเดียว สีน้ำเงินเข้ม (#000080)
         ctx.strokeStyle = '#000080';
         ctx.lineWidth = 3;
         ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
 
         ctx.fillStyle = '#000080';
 
-        // บรรทัดที่ 1: ชื่อโรงเรียน (ฟอนต์สารบรรณขนาดใหญ่ ชิดซ้าย)
         ctx.font = 'bold 24px "Sarabun", sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText('โรงเรียนพิมานพิทยาสรรค์', 22, 42);
 
-        // บรรทัดที่ 2, 3, 4: เนื้อหา
         ctx.font = '22px "Sarabun", sans-serif';
 
         const labelX = 22;
@@ -512,20 +508,16 @@
         const lineStartX = 78;
         const lineEndX = 385;
 
-        // บรรทัดที่ 2: รับที่
         ctx.fillText('รับที่', labelX, 86);
         ctx.fillText(toThaiNumber(regNum), valX, 86);
 
-        // บรรทัดที่ 3: วันที่
         ctx.fillText('วันที่', labelX, 132);
         const thaiDateText = toThaiDate(dateStr);
         ctx.fillText(thaiDateText, valX, 132);
 
-        // บรรทัดที่ 4: เวลา
         ctx.fillText('เวลา', labelX, 172);
         ctx.fillText(toThaiNumber(timeStr), valX, 172);
 
-        // วาดเส้นประให้มีความยาวเท่ากันทุกบรรทัด
         ctx.strokeStyle = '#000080';
         ctx.lineWidth = 1.2;
         ctx.setLineDash([3, 3]);
@@ -541,7 +533,6 @@
         const pngImageBytes = await fetch(dataUrl).then(res => res.arrayBuffer());
         const pngImage = await pdfDoc.embedPng(pngImageBytes);
 
-        // วางตราประทับไว้มุมขวาบนของหน้าแรก
         const stampWidth = 210;
         const stampHeight = 86;
         const x = width - stampWidth - 30;
@@ -604,7 +595,7 @@
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
             const data = await res.json();
             
-            // เมื่อบันทึกสำเร็จ ล้างแคชเก่าทิ้ง เพื่อให้ระบบดึงข้อมูลล่าสุดอัตโนมัติเมื่อกดดูรอบหน้า
+            // ล้างแคชเพื่อให้ดึงข้อมูลใหม่รอบหน้า
             cachedRegisteredBooks = null;
             
             document.getElementById('registerBookForm').reset();
@@ -614,7 +605,6 @@
                 document.getElementById('regNum').value = nextData.next_reg_num;
             }
             
-            // แอบโหลดแคชใหม่เตรียมไว้เบื้องหลังทันที
             preloadRegisteredBooksCache();
         } catch (err) {
             alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
@@ -624,7 +614,6 @@
         }
     }
 
-    // ฟังก์ชันเปิดดูไฟล์ในแท็บใหม่ด้วย Google Drive Viewer แบบออนไลน์
     function openPdfView(url) {
         if (!url) return;
         let fileId = '';
@@ -636,14 +625,15 @@
         window.open(viewUrl, '_blank');
     }
 
-    // ฟังก์ชันแสดงรายการหนังสือรับ (เปิดปุ๊บมาปั๊บจากแคช พร้อมแอบรีเฟรชอัปเดตข้อมูลเบื้องหลังอัตโนมัติ)
+    // ฟังก์ชันแสดงรายการหนังสือรับ (เปิดปุ๊บแสดงข้อมูลจากแคชทันทีแบบไม่หมุนโหลดซ้ำ)
     async function loadRegisteredBooks(forceRefresh = false) {
         const area = document.getElementById('sarabunContentArea');
         
-        // ถ้าไม่มีข้อมูลในแคช หรือผู้ใช้กดปุ่มรีเฟรช ให้โหลดใหม่
+        // ถ้าสั่งรีเฟรชบังคับ หรือยังไม่มีแคชเลย ให้ดึงใหม่
         if (!cachedRegisteredBooks || forceRefresh) {
-            if(!forceRefresh) {
-                area.innerHTML = `<div class="form-section"><div class="d-flex justify-content-between align-items-center mb-3"><h6 class="text-primary fw-bold mb-0"><i class="fas fa-list-alt"></i> รายการหนังสือรับที่ลงทะเบียนแล้ว (รอเกษียณเสนอ ผอ.)</h6><button class="btn btn-outline-secondary btn-sm" onclick="loadRegisteredBooks(true)"><i class="fas fa-sync-alt"></i> โหลดข้อมูลใหม่</button></div><div class="text-center text-muted p-4"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>กำลังโหลดข้อมูล...</div></div>`;
+            if (!forceRefresh) {
+                // หากไม่มีข้อมูลในแคชเลย ให้แสดงตัวหมุนเฉพาะตอนเปิดครั้งแรกสุดเท่านั้น
+                area.innerHTML = `<div class="form-section"><div class="text-center text-muted p-4"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>กำลังโหลดข้อมูล...</div></div>`;
             }
             try {
                 const res = await fetch(`${API_URL}?action=getBooks&status=REGISTERED`);
@@ -655,24 +645,25 @@
                 area.innerHTML = `<div class="form-section text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>`;
                 return;
             }
-        } else {
-            // กรณีมีข้อมูลในแคชอยู่แล้ว ให้แสดงผลทันทีแบบรวดเร็ว และ "แอบดึงข้อมูลล่าสุดจากเซิร์ฟเวอร์มาอัปเดตเบื้องหลังเงียบๆ (Background Sync)"
-            backgroundSyncRegisteredBooks();
         }
 
+        // แสดงตารางทันทีจากแคชที่มีอยู่
         renderRegisteredBooksTable(cachedRegisteredBooks);
+
+        // แอบซิงค์ข้อมูลใหม่เงียบ ๆ เบื้องหลัง (ถ้ามีข้อมูลอัปเดต ระบบจะสลับมาใช้ข้อมูลใหม่ให้เองทันที)
+        if (!forceRefresh) {
+            backgroundSyncRegisteredBooks();
+        }
     }
 
-    // ฟังก์ชันแอบซิงค์ข้อมูลใหม่จาก Google Sheets เงียบๆ เบื้องหลัง
+    // ฟังก์ชันแอบซิงค์ข้อมูลใหม่เงียบ ๆ เบื้องหลัง
     async function backgroundSyncRegisteredBooks() {
         try {
             const res = await fetch(`${API_URL}?action=getBooks&status=REGISTERED`);
             const data = await res.json();
             if (data.status === 'success') {
-                // ถ้าข้อมูลไม่ตรงกับแคชเดิม ให้ Update แคชใหม่และเรนเดอร์ตารางให้อัตโนมัติทันที
                 if (JSON.stringify(cachedRegisteredBooks) !== JSON.stringify(data.books)) {
                     cachedRegisteredBooks = data.books;
-                    // อัปเดตตารางเฉพาะเมื่อผู้ใช้อยู่ที่หน้าจอนี้อยู่
                     if (document.getElementById('s_listRegistered').classList.contains('active')) {
                         renderRegisteredBooksTable(cachedRegisteredBooks);
                     }
@@ -683,12 +674,11 @@
         }
     }
 
-    // เรนเดอร์ตารางจากข้อมูลในแคช
+    // เรนเดอร์ตาราง
     function renderRegisteredBooksTable(books) {
         const area = document.getElementById('sarabunContentArea');
         
         if (books && books.length > 0) {
-            // เรียงลำดับจากหนังสือรับล่าสุด (เลขทะเบียนรับมากสุด) ไว้ด้านบน
             const totalBooks = [...books].sort((a, b) => parseInt(b.reg_num, 10) - parseInt(a.reg_num, 10));
             
             const pageSize = 20;
@@ -787,7 +777,6 @@
             alert(data.message);
             bootstrap.Modal.getInstance(document.getElementById('retireModal')).hide();
             
-            // ล้างแคชและโหลดตารางใหม่ทันทีหลังเกษียณหนังสือเสร็จ
             cachedRegisteredBooks = null;
             loadRegisteredBooks(true);
         } catch (err) {
