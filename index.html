@@ -237,7 +237,7 @@
     </div>
 </div>
 
-<!-- Modal แจ้งเตือนดีไซน์พรีเมียม -->
+<!-- Modal แจ้งเตือนทั่วไป (ใช้สำหรับเคส Error หรือแจ้งเตือนอื่นๆ ยกเว้นตอนเพิ่มหนังสือสำเร็จ) -->
 <div class="modal fade" id="appAlertModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -321,6 +321,7 @@
     let cachedRegisteredBooks = null;
     let pdfPageScale = 1;
     let activePdfBytes = null;
+    let currentSearchQuery = "";
 
     function showAppAlert(title, message, type = 'info') {
         document.getElementById('appAlertTitle').innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle text-success' : type === 'error' ? 'exclamation-triangle text-danger' : 'info-circle'}"></i> ${title}`;
@@ -375,6 +376,7 @@
         currentUser = null;
         userSignatureData = null;
         cachedRegisteredBooks = null; 
+        currentSearchQuery = "";
         document.getElementById('loginForm').reset();
         document.getElementById('homeHubView').classList.remove('hidden');
         document.getElementById('sarabunDashboard').classList.add('hidden');
@@ -690,14 +692,19 @@
         try {
             await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
             cachedRegisteredBooks = null;
+            
+            // รีเซ็ตฟอร์มทันทีโดยไม่แจ้งเตือน เพื่อให้พร้อมคีย์หนังสือเล่มถัดไป
             document.getElementById('registerBookForm').reset();
+            document.getElementById('totalPages').value = "1";
+            document.getElementById('targetPage').value = "1";
+            document.getElementById('stampOption').value = "print";
+
             const nextRes = await fetch(`${API_URL}?action=getNextRegNum`);
             const nextData = await nextRes.json();
             if (nextData.status === 'success') {
                 document.getElementById('regNum').value = nextData.next_reg_num;
             }
             preloadRegisteredBooksCache();
-            showAppAlert('สำเร็จ', 'จัดเก็บเอกสารและลงทะเบียนเรียบร้อยแล้ว', 'success');
         } catch (err) {
             showAppAlert('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
         } finally {
@@ -753,13 +760,27 @@
         }
     }
 
+    function handleSearchInput(e) {
+        currentSearchQuery = e.target.value.toLowerCase().trim();
+        window.currentBookPage = 1;
+        renderRegisteredBooksTable(cachedRegisteredBooks);
+    }
+
     function renderRegisteredBooksTable(books) {
         const area = document.getElementById('sarabunContentArea');
         
         if (books && books.length > 0) {
-            const totalBooks = [...books].sort((a, b) => parseInt(b.reg_num, 10) - parseInt(a.reg_num, 10));
+            // กรองข้อมูลตามคำค้นหา (ค้นหาจากเลขรับ, ที่หนังสือ, หรือเรื่อง)
+            const filteredBooks = books.filter(b => {
+                if (!currentSearchQuery) return true;
+                return String(b.reg_num).toLowerCase().includes(currentSearchQuery) ||
+                       String(b.doc_no).toLowerCase().includes(currentSearchQuery) ||
+                       String(b.subject).toLowerCase().includes(currentSearchQuery);
+            });
+
+            const totalBooks = [...filteredBooks].sort((a, b) => parseInt(b.reg_num, 10) - parseInt(a.reg_num, 10));
             const pageSize = 20;
-            const totalPages = Math.ceil(totalBooks.length / pageSize);
+            const totalPages = Math.ceil(totalBooks.length / pageSize) || 1;
             window.currentBookPage = window.currentBookPage || 1;
             if(window.currentBookPage > totalPages) window.currentBookPage = 1;
 
@@ -771,14 +792,13 @@
                     <tr>
                         <td class="text-center"><span class="badge bg-secondary">${b.reg_num}</span></td>
                         <td>${b.doc_no}</td>
-                        <td>${b.doc_from}</td>
                         <td>${b.subject}</td>
-                        <td class="text-center">
-                            <span class="badge bg-info text-dark">หน้าเกษียณ: ${b.target_page || 1} / ${b.total_pages || 1}</span>
-                        </td>
                         <td class="text-center">
                             <button onclick="openPdfView('${b.pdf_stamped_url}')" class="btn btn-outline-primary btn-sm py-0 px-2 mb-1" style="font-size: 0.8rem;"><i class="fas fa-file-pdf"></i> เปิดดู</button>
                             <button class="btn btn-warning btn-sm py-0 px-2 mb-1 text-dark" style="font-size: 0.8rem;" onclick="openRetireModal('${b.book_id}', '${b.pdf_stamped_url}', ${b.target_page || 1})"><i class="fas fa-pen-nib"></i> เกษียณ</button>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-success">${b.status}</span>
                         </td>
                     </tr>
                 `;
@@ -795,23 +815,28 @@
 
             area.innerHTML = `
                 <div class="form-section">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                         <h6 class="text-primary fw-bold mb-0"><i class="fas fa-list-alt"></i> รายการหนังสือรับที่ลงทะเบียนแล้ว (รอเกษียณเสนอ ผอ.)</h6>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="loadRegisteredBooks(true)" title="รีเฟรชข้อมูลล่าสุด"><i class="fas fa-sync-alt"></i> รีเฟรช</button>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="input-group input-group-sm" style="width: 240px;">
+                                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" class="form-control" id="searchBookInput" placeholder="ค้นหาเลขรับ, ที่หนังสือ, เรื่อง..." value="${currentSearchQuery}" oninput="handleSearchInput(event)">
+                            </div>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="loadRegisteredBooks(true)" title="รีเฟรชข้อมูลล่าสุด"><i class="fas fa-sync-alt"></i></button>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover align-middle" style="font-size: 0.85rem;">
                             <thead class="table-primary text-center">
                                 <tr>
                                     <th style="width: 70px;">เลขรับ</th>
-                                    <th style="width: 120px;">ที่หนังสือ</th>
-                                    <th style="width: 150px;">จาก</th>
+                                    <th style="width: 140px;">ที่หนังสือ</th>
                                     <th>เรื่อง</th>
-                                    <th style="width: 100px;">หน้าเกษียณ</th>
                                     <th style="width: 150px;">จัดการ</th>
+                                    <th style="width: 110px;">สถานะ</th>
                                 </tr>
                             </thead>
-                            <tbody>${rowsHtml}</tbody>
+                            <tbody>${rowsHtml.length > 0 ? rowsHtml : `<tr><td colspan="5" class="text-center text-muted py-4">ไม่พบรายการหนังสือที่ค้นหา</td></tr>`}</tbody>
                         </table>
                     </div>
                     ${paginationHtml}
@@ -902,7 +927,6 @@
             const loadingTask = pdfjsLib.getDocument({ data: activePdfBytes });
             const pdfDoc = await loadingTask.promise;
             
-            // โหลดเฉพาะหน้าที่ระบุไว้เท่านั้น (ป้องกันหน้าเกินและประหยัดเวลาโหลด)
             const actualPageNum = Math.max(1, Math.min(targetPage, pdfDoc.numPages));
             const page = await pdfDoc.getPage(actualPageNum);
 
