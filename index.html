@@ -100,19 +100,20 @@
             max-width: 100%;
             overflow: auto;
         }
-        /* กล่องจำลองข้อความเกษียณและลายเซ็นที่จะแสดงบนหน้าจอพรีวิวตอนคลิกเลือกตำแหน่ง */
+        /* กล่องจำลองข้อความเกษียณชิดซ้าย */
         #clickPreviewBox {
             position: absolute;
             pointer-events: none;
             display: none;
             z-index: 10;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border: 1.5px dashed #1a5276;
-            padding: 4px 8px;
+            padding: 6px 10px;
             border-radius: 4px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             font-size: 11px;
             color: #000080;
+            text-align: left;
             white-space: nowrap;
         }
 
@@ -260,17 +261,18 @@
                             <div id="previewPositionText" class="mt-2 text-muted small"></div>
                         </div>
                         <div class="alert alert-info small mb-0">
-                            <i class="fas fa-info-circle"></i> <b>วิธีใช้งาน:</b> พิมพ์ข้อความเกษียณ แล้ว <b>คลิกเลือกตำแหน่ง</b> บนหน้าเอกสาร PDF ด้านขวา กล่องข้อความจำลองจะแสดงให้เห็นตำแหน่งที่จะแปะจริง จากนั้นกดปุ่มยืนยันครับ
+                            <i class="fas fa-info-circle"></i> <b>วิธีใช้งาน:</b> พิมพ์ข้อความ แล้ว <b>คลิกเลือกตำแหน่ง</b> บนหน้าเอกสาร PDF ด้านขวา กล่องข้อความชิดซ้ายพร้อมลายเซ็นและชื่อจะจำลองให้เห็นตำแหน่ง จากนั้นกดปุ่มยืนยันครับ
                         </div>
                     </div>
                     <div class="col-md-7 text-center bg-dark p-2 rounded d-flex flex-column align-items-center justify-content-center" style="min-height: 400px; max-height: 70vh; overflow: auto;">
                         <div id="pdfLoadingIndicator" class="text-white small mb-2"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดหน้าเอกสาร...</div>
                         <div id="pdfCanvasContainer" onclick="handlePdfCanvasClick(event)">
                             <canvas id="pdfPreviewCanvas"></canvas>
-                            <!-- กล่องจำลองข้อความเกษียณและลายเซ็นแสดงบนหน้าพรีวิว -->
+                            <!-- กล่องจำลองข้อความเกษียณ ชิดซ้าย พร้อมลายเซ็นและชื่อ-ตำแหน่ง -->
                             <div id="clickPreviewBox">
-                                <div id="previewBoxText" class="fw-bold">เรียน ผู้อำนวยการเพื่อโปรดพิจารณา</div>
-                                <img id="previewBoxSig" src="" style="max-height: 30px; display: block; margin-top: 2px;" alt="Sig">
+                                <div id="previewBoxText" class="fw-bold" style="text-align: left;">เรียน ผู้อำนวยการเพื่อโปรดพิจารณา</div>
+                                <img id="previewBoxSig" src="" style="max-height: 25px; display: block; margin: 2px 0;" alt="Sig">
+                                <div id="previewBoxPos" class="small" style="font-size: 9px; color: #475569; text-align: left;">(ชื่อ-ตำแหน่ง)</div>
                             </div>
                         </div>
                     </div>
@@ -767,12 +769,16 @@
         document.getElementById('retireBookId').value = bookId;
         
         const sigUrl = userSignatureData.signature_png_url;
+        const posText = userSignatureData.default_position_text || '';
+
         document.getElementById('previewSignatureImg').src = sigUrl;
         document.getElementById('previewSignatureImg').style.display = 'inline-block';
-        document.getElementById('previewPositionText').innerText = userSignatureData.default_position_text;
+        document.getElementById('previewPositionText').innerText = posText;
 
-        // อัปเดตข้อความและรูปลายเซ็นในกล่องพรีวิวบนหน้า PDF
+        // อัปเดตข้อความ ลายเซ็น และตำแหน่งในกล่องพรีวิว
         document.getElementById('previewBoxText').innerText = document.getElementById('retireText').value;
+        document.getElementById('previewBoxPos').innerText = '(' + posText + ')';
+        
         const boxSig = document.getElementById('previewBoxSig');
         if (sigUrl) {
             boxSig.src = sigUrl;
@@ -787,7 +793,6 @@
         await renderPdfPreviewOnCanvas(pdfUrl);
     }
 
-    // อัปเดตข้อความในกล่องพรีวิวเรียลไทม์เมื่อพิมพ์ข้อความเกษียณ
     function updatePreviewTextOnCanvas() {
         const textVal = document.getElementById('retireText').value;
         document.getElementById('previewBoxText').innerText = textVal;
@@ -831,7 +836,6 @@
             await page.render({ canvasContext: context, viewport: viewport }).promise;
             loadingIndicator.style.display = 'none';
 
-            // ตั้งค่าตำแหน่งเริ่มต้นแสดงกล่องพรีวิวตรงกลางหน้ากระดาษ
             const initX = viewport.width / 2;
             const initY = 100;
             document.getElementById('clickPdfX').value = initX;
@@ -887,17 +891,19 @@
             const pdfX = clickX;
             const pdfY = height - clickY;
 
-            // ฝังข้อความเกษียณ
+            // ฝังข้อความเกษียณ (ชิดซ้าย)
             const helveticaFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
             firstPage.drawText(retireText, {
                 x: pdfX,
                 y: pdfY,
-                size: 14,
+                size: 13,
                 font: helveticaFont,
                 color: PDFLib.rgb(0, 0, 0.5),
             });
 
-            // ฝังรูปลายเซ็น
+            let currentY = pdfY - 20;
+
+            // ฝังรูปลายเซ็น (ใต้ข้อความเกษียณ)
             if (userSignatureData && userSignatureData.signature_png_url) {
                 const sigBase64 = userSignatureData.signature_png_url;
                 const base64Data = sigBase64.split(',')[1] || sigBase64;
@@ -911,14 +917,35 @@
                 const sigImage = await pdfDoc.embedPng(sigBytes);
                 firstPage.drawImage(sigImage, {
                     x: pdfX,
-                    y: pdfY - 50,
-                    width: 100,
-                    height: 40
+                    y: currentY - 35,
+                    width: 90,
+                    height: 35
+                });
+                currentY -= 45;
+            }
+
+            // ฝังข้อความชื่อและตำแหน่ง (ใต้ลายเซ็น)
+            if (userSignatureData && userSignatureData.default_position_text) {
+                firstPage.drawText("(" + userSignatureData.default_position_text + ")", {
+                    x: pdfX,
+                    y: currentY,
+                    size: 11,
+                    font: helveticaFont,
+                    color: PDFLib.rgb(0.2, 0.2, 0.2),
                 });
             }
 
             const pdfBytes = await pdfDoc.save();
-            const pdfBase64 = "data:application/pdf;base64," + btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
+            
+            // แยกย่อหน้า Base64 เป็นชิ้นเล็กๆ เพื่อป้องกันการส่งข้อมูลล้มเหลว
+            const CHUNK_SIZE = 32768;
+            let binary = "";
+            const bytesArray = new Uint8Array(pdfBytes);
+            for (let i = 0; i < bytesArray.length; i += CHUNK_SIZE) {
+                let chunk = bytesArray.subarray(i, i + CHUNK_SIZE);
+                binary += String.fromCharCode.apply(null, chunk);
+            }
+            const pdfBase64 = "data:application/pdf;base64," + btoa(binary);
 
             const payload = {
                 action: "retireBook",
@@ -930,15 +957,18 @@
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
             const data = await res.json();
             
-            alert(data.message);
-            bootstrap.Modal.getInstance(document.getElementById('retireModal')).hide();
-            
-            cachedRegisteredBooks = null;
-            loadRegisteredBooks(true);
+            if (data.status === 'success') {
+                alert(data.message);
+                bootstrap.Modal.getInstance(document.getElementById('retireModal')).hide();
+                cachedRegisteredBooks = null;
+                loadRegisteredBooks(true);
+            } else {
+                throw new Error(data.message || "เกิดข้อผิดพลาดในการบันทึก");
+            }
 
         } catch (err) {
             console.error("Retire error:", err);
-            alert('เกิดข้อผิดพลาดในการเกษียณหนังสือ กรุณาลองใหม่อีกครั้ง');
+            alert('เกิดข้อผิดพลาดในการเกษียณหนังสือ: ' + err.message);
         } finally {
             btn.disabled = false;
             btn.innerHTML = `<i class="fas fa-paper-plane"></i> ยืนยันเกษียณและบันทึกทับไฟล์เดิม`;
