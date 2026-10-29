@@ -1040,7 +1040,7 @@
         document.getElementById('clickPdfY').value = y;
     }
 
-    async function confirmRetireBook() {
+   async function confirmRetireBook() {
         const bookId = document.getElementById('retireBookId').value;
         const retireText = document.getElementById('retireText').value;
         const retireDate = document.getElementById('retireDateInput').value;
@@ -1059,10 +1059,24 @@
             }
 
             const pdfDoc = await PDFLib.PDFDocument.load(activePdfBytes);
+            pdfDoc.registerFontkit(fontkit);
+
+            // ดึงไฟล์ฟอนต์ THSarabunPSK จากลิงก์สำรองที่เสถียร หรือแปลงผ่านตัวเข้ารหัสภายใน
+            // ใช้ลิงก์ CDN ที่รองรับตระกูลฟอนต์ไทยแท้ .ttf
+            const fontUrl = "https://cdn.jsdelivr.net/gh/lazywasabi/thai-font-assets@master/fonts/THSarabunPSK/THSarabunPSK.ttf";
             
-            // ใช้ฟอนต์มาตรฐานของ PDF (Helvetica) เพื่อความเสถียร 100% ไม่ติด 404 และไม่พังเรื่องฟอร์แมต
-            // (รองรับภาษาอังกฤษและตัวเลข ส่วนข้อความภาษาไทยภาษาอังกฤษผสมจะแสดงผลได้สมบูรณ์)
-            const thaiFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+            let fontBytes;
+            try {
+                const fontRes = await fetch(fontUrl);
+                if (!fontRes.ok) throw new Error("Fetch failed");
+                fontBytes = await fontRes.arrayBuffer();
+            } catch (e) {
+                // หากดึงจาก cdn แรกไม่ผ่าน ใช้ลิงก์สำรองจาก GitHub คุณอัฟฟานโดยตรง
+                const backupRes = await fetch("https://raw.githubusercontent.com/joodami/school-assets/main/THSarabunPSK.ttf");
+                fontBytes = await backupRes.arrayBuffer();
+            }
+
+            const thaiFont = await pdfDoc.embedFont(fontBytes);
 
             const pages = pdfDoc.getPages();
             const targetPageIndex = Math.max(0, Math.min(targetPage - 1, pages.length - 1));
@@ -1127,7 +1141,7 @@
             }
 
             if (retireDate) {
-                const thaiDateStr = "Date: " + retireDate;
+                const thaiDateStr = "วันที่ " + toThaiDate(retireDate);
                 selectedPage.drawText(thaiDateStr, {
                     x: pdfX,
                     y: currentY,
