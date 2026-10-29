@@ -772,10 +772,17 @@
 
     function openPdfView(url) {
         if (!url) return;
+        // ดึง File ID ออกมาจากลิงก์ Google Drive
         let fileId = '';
         const match = url.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
         if (match && match[1]) fileId = match[1];
-        const viewUrl = fileId ? `https://drive.google.com/file/d/${fileId}/view?usp=sharing` : url;
+
+        // หากเป็น Google Drive ให้ใช้ลิงก์ preview แบบบังคับอัปเดต หรือใช้ลิงก์ export view
+        // วิธีนี้จะช่วยบังคับให้ Google Drive ดึงไฟล์ล่าสุดจากสตรีมมาแสดงผลทันทีโดยไม่ติดภาพแคชเก่า
+        const viewUrl = fileId 
+            ? `https://drive.google.com/uc?export=view&id=${fileId}&t=${new Date().getTime()}` 
+            : url;
+            
         window.open(viewUrl, '_blank');
     }
 
