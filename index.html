@@ -100,18 +100,20 @@
             max-width: 100%;
             overflow: auto;
         }
-        #clickMarker {
+        /* กล่องจำลองข้อความเกษียณและลายเซ็นที่จะแสดงบนหน้าจอพรีวิวตอนคลิกเลือกตำแหน่ง */
+        #clickPreviewBox {
             position: absolute;
-            width: 16px;
-            height: 16px;
-            background: rgba(239, 68, 68, 0.8);
-            border: 2px solid white;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
             pointer-events: none;
-            box-shadow: 0 0 4px rgba(0,0,0,0.5);
             display: none;
             z-index: 10;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1.5px dashed #1a5276;
+            padding: 4px 8px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            font-size: 11px;
+            color: #000080;
+            white-space: nowrap;
         }
 
         @media (max-width: 991px) {
@@ -250,7 +252,7 @@
                     <div class="col-md-5">
                         <div class="mb-3">
                             <label class="form-label fw-bold small">1. ข้อความเกษียณหนังสือ</label>
-                            <textarea class="form-control form-control-sm" id="retireText" rows="3" required>เรียน ผู้อำนวยการเพื่อโปรดพิจารณา</textarea>
+                            <textarea class="form-control form-control-sm" id="retireText" rows="3" oninput="updatePreviewTextOnCanvas()" required>เรียน ผู้อำนวยการเพื่อโปรดพิจารณา</textarea>
                         </div>
                         <div class="p-3 bg-light rounded border text-center mb-3">
                             <div class="fw-bold small mb-2 text-primary">ตัวอย่างลายเซ็นที่จะใช้ประทับ</div>
@@ -258,14 +260,18 @@
                             <div id="previewPositionText" class="mt-2 text-muted small"></div>
                         </div>
                         <div class="alert alert-info small mb-0">
-                            <i class="fas fa-info-circle"></i> <b>วิธีใช้งาน:</b> กรอกข้อความเกษียณ แล้วใช้เมาส์ <b>คลิกเลือกตำแหน่ง</b> บนหน้าเอกสาร PDF ทางด้านขวา จากนั้นกดปุ่มยืนยันครับ
+                            <i class="fas fa-info-circle"></i> <b>วิธีใช้งาน:</b> พิมพ์ข้อความเกษียณ แล้ว <b>คลิกเลือกตำแหน่ง</b> บนหน้าเอกสาร PDF ด้านขวา กล่องข้อความจำลองจะแสดงให้เห็นตำแหน่งที่จะแปะจริง จากนั้นกดปุ่มยืนยันครับ
                         </div>
                     </div>
                     <div class="col-md-7 text-center bg-dark p-2 rounded d-flex flex-column align-items-center justify-content-center" style="min-height: 400px; max-height: 70vh; overflow: auto;">
                         <div id="pdfLoadingIndicator" class="text-white small mb-2"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดหน้าเอกสาร...</div>
                         <div id="pdfCanvasContainer" onclick="handlePdfCanvasClick(event)">
                             <canvas id="pdfPreviewCanvas"></canvas>
-                            <div id="clickMarker"></div>
+                            <!-- กล่องจำลองข้อความเกษียณและลายเซ็นแสดงบนหน้าพรีวิว -->
+                            <div id="clickPreviewBox">
+                                <div id="previewBoxText" class="fw-bold">เรียน ผู้อำนวยการเพื่อโปรดพิจารณา</div>
+                                <img id="previewBoxSig" src="" style="max-height: 30px; display: block; margin-top: 2px;" alt="Sig">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -765,18 +771,33 @@
         document.getElementById('previewSignatureImg').style.display = 'inline-block';
         document.getElementById('previewPositionText').innerText = userSignatureData.default_position_text;
 
+        // อัปเดตข้อความและรูปลายเซ็นในกล่องพรีวิวบนหน้า PDF
+        document.getElementById('previewBoxText').innerText = document.getElementById('retireText').value;
+        const boxSig = document.getElementById('previewBoxSig');
+        if (sigUrl) {
+            boxSig.src = sigUrl;
+            boxSig.style.display = 'block';
+        } else {
+            boxSig.style.display = 'none';
+        }
+
         const modal = new bootstrap.Modal(document.getElementById('retireModal'));
         modal.show();
 
         await renderPdfPreviewOnCanvas(pdfUrl);
     }
 
-    // 📌 ดึงไฟล์ PDF ผ่าน GAS API แบบ Base64 เพื่อแสดงพรีวิวโดยไม่ติด CORS
+    // อัปเดตข้อความในกล่องพรีวิวเรียลไทม์เมื่อพิมพ์ข้อความเกษียณ
+    function updatePreviewTextOnCanvas() {
+        const textVal = document.getElementById('retireText').value;
+        document.getElementById('previewBoxText').innerText = textVal;
+    }
+
     async function renderPdfPreviewOnCanvas(url) {
         const loadingIndicator = document.getElementById('pdfLoadingIndicator');
-        const marker = document.getElementById('clickMarker');
+        const previewBox = document.getElementById('clickPreviewBox');
         loadingIndicator.style.display = 'block';
-        marker.style.display = 'none';
+        previewBox.style.display = 'none';
 
         try {
             const res = await fetch(`${API_URL}?action=getPdfBase64&url=${encodeURIComponent(url)}`);
@@ -786,7 +807,6 @@
                 throw new Error("ไม่สามารถดึงไฟล์ PDF ได้");
             }
 
-            // แปลง Base64 กลับเป็น ArrayBuffer สำหรับ PDF.js
             const base64Data = data.pdf_base64.split(',')[1] || data.pdf_base64;
             const binaryString = atob(base64Data);
             const len = binaryString.length;
@@ -811,11 +831,15 @@
             await page.render({ canvasContext: context, viewport: viewport }).promise;
             loadingIndicator.style.display = 'none';
 
-            document.getElementById('clickPdfX').value = viewport.width / 2;
-            document.getElementById('clickPdfY').value = 100;
-            marker.style.left = (viewport.width / 2) + 'px';
-            marker.style.top = '100px';
-            marker.style.display = 'block';
+            // ตั้งค่าตำแหน่งเริ่มต้นแสดงกล่องพรีวิวตรงกลางหน้ากระดาษ
+            const initX = viewport.width / 2;
+            const initY = 100;
+            document.getElementById('clickPdfX').value = initX;
+            document.getElementById('clickPdfY').value = initY;
+            
+            previewBox.style.left = initX + 'px';
+            previewBox.style.top = initY + 'px';
+            previewBox.style.display = 'block';
 
         } catch (err) {
             console.error("PDF Preview Error:", err);
@@ -826,14 +850,14 @@
     function handlePdfCanvasClick(event) {
         const canvas = document.getElementById('pdfPreviewCanvas');
         const rect = canvas.getBoundingClientRect();
-        const marker = document.getElementById('clickMarker');
+        const previewBox = document.getElementById('clickPreviewBox');
 
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
 
-        marker.style.left = x + 'px';
-        marker.style.top = y + 'px';
-        marker.style.display = 'block';
+        previewBox.style.left = x + 'px';
+        previewBox.style.top = y + 'px';
+        previewBox.style.display = 'block';
 
         document.getElementById('clickPdfX').value = x;
         document.getElementById('clickPdfY').value = y;
@@ -875,7 +899,6 @@
 
             // ฝังรูปลายเซ็น
             if (userSignatureData && userSignatureData.signature_png_url) {
-                // แปลง Base64 ของลายเซ็นให้เป็น Byte สำหรับฝังใน PDF-lib
                 const sigBase64 = userSignatureData.signature_png_url;
                 const base64Data = sigBase64.split(',')[1] || sigBase64;
                 const binaryString = atob(base64Data);
@@ -934,7 +957,7 @@
                     <h5 class="text-primary mb-3"><i class="fas fa-clock"></i> รายการพิจารณาหนังสือรับจากธุรการ</h5>
                     <p class="text-muted">กำลังพัฒนาเนื้อหาการรับพิจารณาหนังสือของ ผอ...</p>
                 </div>`;
-            } else {
+        } else {
             area.innerHTML = `<div class="form-section"><h5>เมนู: ${view}</h5><p class="text-muted">กำลังพัฒนาเนื้อหาในส่วนนี้...</p></div>`;
         }
     }
