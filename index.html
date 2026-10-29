@@ -857,7 +857,7 @@
                         <td>${b.doc_no}</td>
                         <td>${b.subject}</td>
                         <td class="text-center">
-                            <button onclick="openPdfView('${b.pdf_stamped_url}')" class="btn btn-outline-primary btn-sm py-0 px-2 mb-1" style="font-size: 0.8rem;"><i class="fas fa-file-pdf"></i> เปิดดู</button>
+                            <button onclick="openPdfView('${b.pdf_stamped_url}?t=${new Date().getTime()}')" class="btn btn-outline-primary btn-sm py-0 px-2 mb-1" style="font-size: 0.8rem;"><i class="fas fa-file-pdf"></i> เปิดดู</button>
                             <button class="btn btn-warning btn-sm py-0 px-2 mb-1 text-dark" style="font-size: 0.8rem;" onclick="openRetireModal('${b.book_id}', '${b.pdf_stamped_url}', ${b.target_page || 1})"><i class="fas fa-pen-nib"></i> เกษียณ</button>
                         </td>
                         <td class="text-center">
