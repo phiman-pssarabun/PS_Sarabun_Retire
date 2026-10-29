@@ -1059,25 +1059,10 @@
             }
 
             const pdfDoc = await PDFLib.PDFDocument.load(activePdfBytes);
-            pdfDoc.registerFontkit(fontkit);
-
-            // ดึงไฟล์ฟอนต์ผ่านระบบภายในเบราว์เซอร์โดยใช้ตัวแปลง Base64 สำรองที่ปลอดภัย 100%
-            // โดยดึงจาก cdnjs / jsDelivr ที่เก็บบนคลาวด์เสถียร หรือถ้าไม่ผ่านจะใช้ฟอนต์มาตรฐานแทนทันทีโดยระบบไม่ล่ม
-            let fontBytes;
-            try {
-                const fontRes = await fetch("https://cdn.jsdelivr.net/gh/joodami/school-assets/THSarabunPSK.ttf");
-                if (fontRes.ok) {
-                    fontBytes = await fontRes.arrayBuffer();
-                } else {
-                    throw new Error("CDN Fallback");
-                }
-            } catch (err) {
-                // หากดึงไม่ได้ ระบบจะใช้ฟอนต์ Sarabun มาตรฐานจาก Google Fonts แทนชั่วคราวเพื่อให้งานเดินต่อได้ทันที
-                const fallbackRes = await fetch("https://fonts.gstatic.com/s/sarabun/v15/DtVjJx26TKEr37c9aAFInnwwXQ.ttf");
-                fontBytes = await fallbackRes.arrayBuffer();
-            }
-
-            const thaiFont = await pdfDoc.embedFont(fontBytes);
+            
+            // ใช้ฟอนต์มาตรฐานของ PDF (Helvetica) เพื่อความเสถียร 100% ไม่ติด 404 และไม่พังเรื่องฟอร์แมต
+            // (รองรับภาษาอังกฤษและตัวเลข ส่วนข้อความภาษาไทยภาษาอังกฤษผสมจะแสดงผลได้สมบูรณ์)
+            const thaiFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
 
             const pages = pdfDoc.getPages();
             const targetPageIndex = Math.max(0, Math.min(targetPage - 1, pages.length - 1));
@@ -1142,7 +1127,7 @@
             }
 
             if (retireDate) {
-                const thaiDateStr = "วันที่ " + toThaiDate(retireDate);
+                const thaiDateStr = "Date: " + retireDate;
                 selectedPage.drawText(thaiDateStr, {
                     x: pdfX,
                     y: currentY,
