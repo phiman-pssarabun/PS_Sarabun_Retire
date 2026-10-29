@@ -14,7 +14,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- เพิ่ม pdf-lib และ fontkit สำหรับรองรับฟอนต์ภาษาไทยบน PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <script src="https://unpkg.com/@pdf-lib/fontkit/dist/fontkit.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -212,6 +211,7 @@
     </div>
 </div>
 
+<!-- Modal ล็อกอิน -->
 <div class="modal fade" id="loginModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -237,6 +237,25 @@
     </div>
 </div>
 
+<!-- Modal แจ้งเตือนดีไซน์พรีเมียม -->
+<div class="modal fade" id="appAlertModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white" id="appAlertHeader">
+                <h5 class="modal-title" id="appAlertTitle"><i class="fas fa-info-circle"></i> แจ้งเตือนระบบ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div id="appAlertIcon" class="mb-3 fs-1 text-primary"><i class="fas fa-bell"></i></div>
+                <p id="appAlertMessage" class="mb-0 fs-6 text-dark fw-medium" style="white-space: pre-line;"></p>
+            </div>
+            <div class="modal-footer justify-content-center bg-light">
+                <button type="button" class="btn btn-primary btn-sm px-4" data-bs-dismiss="modal">ตกลง</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal เกษียณหนังสือ -->
 <div class="modal fade" id="retireModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -247,6 +266,7 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="retireBookId">
+                <input type="hidden" id="targetRetirePage" value="1">
                 <input type="hidden" id="clickPdfX" value="100">
                 <input type="hidden" id="clickPdfY" value="100">
 
@@ -267,7 +287,7 @@
                             <div id="previewPositionText" class="text-muted small"></div>
                         </div>
                         <div class="alert alert-info small mb-0">
-                            <i class="fas fa-info-circle"></i> <b>วิธีใช้งาน:</b> กรอกข้อความ เลือกวันที่ แล้ว <b>คลิกเลือกตำแหน่ง</b> บนหน้าเอกสาร PDF ด้านขวา จากนั้นกดปุ่มยืนยันครับ
+                            <i class="fas fa-info-circle"></i> <b>วิธีใช้งาน:</b> ระบบโหลดเฉพาะหน้าที่กำหนดอัตโนมัติ กรอกข้อความ เลือกวันที่ แล้ว <b>คลิกเลือกตำแหน่ง</b> บนเอกสารด้านขวา จากนั้นกดปุ่มยืนยันครับ
                         </div>
                     </div>
                     <div class="col-md-7 text-center bg-dark p-2 rounded d-flex flex-column align-items-center justify-content-center" style="min-height: 400px; max-height: 70vh; overflow: auto;">
@@ -302,6 +322,22 @@
     let pdfPageScale = 1;
     let activePdfBytes = null;
 
+    function showAppAlert(title, message, type = 'info') {
+        document.getElementById('appAlertTitle').innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle text-success' : type === 'error' ? 'exclamation-triangle text-danger' : 'info-circle'}"></i> ${title}`;
+        document.getElementById('appAlertMessage').innerText = message;
+        
+        const iconEl = document.getElementById('appAlertIcon');
+        if (type === 'success') {
+            iconEl.innerHTML = `<i class="fas fa-check-circle text-success"></i>`;
+        } else if (type === 'error') {
+            iconEl.innerHTML = `<i class="fas fa-exclamation-circle text-danger"></i>`;
+        } else {
+            iconEl.innerHTML = `<i class="fas fa-bell text-primary"></i>`;
+        }
+
+        new bootstrap.Modal(document.getElementById('appAlertModal')).show();
+    }
+
     function openLoginModal(role, title) {
         document.getElementById('loginForm').reset();
         document.getElementById('targetRole').value = role;
@@ -330,7 +366,7 @@
             await fetchSignatureStatus();
             showExecView('pending');
         } else {
-            alert('ระบบนี้กำลังอยู่ในระหว่างพัฒนาค่ะ');
+            showAppAlert('แจ้งเตือน', 'ระบบนี้กำลังอยู่ในระหว่างพัฒนาค่ะ', 'info');
             logout();
         }
     }
@@ -404,14 +440,22 @@
                                 <label class="form-label small mb-1">เรื่อง</label>
                                 <input type="text" class="form-control form-control-sm" id="subject" required placeholder="ชื่อเรื่องหนังสือ">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label small mb-1">แนบไฟล์หนังสือ (PDF)</label>
                                 <input type="file" class="form-control form-control-sm" id="pdfFile" accept="application/pdf" required>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label small mb-1">การพิมพ์การลงทะเบียนรับบนหัวหนังสือ</label>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">จำนวนหน้าทั้งหมด</label>
+                                <input type="number" class="form-control form-control-sm" id="totalPages" min="1" value="1" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1">หน้าที่ต้องการเกษียณ</label>
+                                <input type="number" class="form-control form-control-sm" id="targetPage" min="1" value="1" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1">การประทับตราบนหัวหนังสือ</label>
                                 <select class="form-select form-select-sm" id="stampOption">
-                                    <option value="print" selected>พิมพ์ (ประทับตราน้ำเงินอัตโนมัติ)</option>
+                                    <option value="print" selected>พิมพ์ (ประทับตราน้ำเงิน)</option>
                                     <option value="noprint">ไม่พิมพ์</option>
                                 </select>
                             </div>
@@ -505,11 +549,11 @@
         try {
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
             const data = await res.json();
-            alert(data.message);
+            showAppAlert('สำเร็จ', data.message, 'success');
             await fetchSignatureStatus();
             renderSignatureForm();
         } catch (err) {
-            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+            showAppAlert('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + err.message, 'error');
         } finally {
             btn.disabled = false;
         }
@@ -609,6 +653,8 @@
         const regNum = document.getElementById('regNum').value;
         const stampOption = document.getElementById('stampOption').value;
         const docDate = document.getElementById('docDate').value;
+        const totalPages = document.getElementById('totalPages').value;
+        const targetPage = document.getElementById('targetPage').value;
 
         const now = new Date();
         const timeStr = String(now.getHours()).padStart(2, '0') + ':' + 
@@ -636,7 +682,9 @@
             subject: document.getElementById('subject').value,
             stamp_option: stampOption,
             pdf_base64: pdfBase64,
-            pdf_name: `เลขรับที่ ${regNum}.pdf`
+            pdf_name: `เลขรับที่ ${regNum}.pdf`,
+            total_pages: parseInt(totalPages, 10),
+            target_page: parseInt(targetPage, 10)
         };
 
         try {
@@ -649,8 +697,9 @@
                 document.getElementById('regNum').value = nextData.next_reg_num;
             }
             preloadRegisteredBooksCache();
+            showAppAlert('สำเร็จ', 'จัดเก็บเอกสารและลงทะเบียนเรียบร้อยแล้ว', 'success');
         } catch (err) {
-            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+            showAppAlert('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
         } finally {
             loadingBar.style.display = 'none';
             btn.disabled = false;
@@ -725,8 +774,11 @@
                         <td>${b.doc_from}</td>
                         <td>${b.subject}</td>
                         <td class="text-center">
+                            <span class="badge bg-info text-dark">หน้าเกษียณ: ${b.target_page || 1} / ${b.total_pages || 1}</span>
+                        </td>
+                        <td class="text-center">
                             <button onclick="openPdfView('${b.pdf_stamped_url}')" class="btn btn-outline-primary btn-sm py-0 px-2 mb-1" style="font-size: 0.8rem;"><i class="fas fa-file-pdf"></i> เปิดดู</button>
-                            <button class="btn btn-warning btn-sm py-0 px-2 mb-1 text-dark" style="font-size: 0.8rem;" onclick="openRetireModal('${b.book_id}', '${b.pdf_stamped_url}')"><i class="fas fa-pen-nib"></i> เกษียณ</button>
+                            <button class="btn btn-warning btn-sm py-0 px-2 mb-1 text-dark" style="font-size: 0.8rem;" onclick="openRetireModal('${b.book_id}', '${b.pdf_stamped_url}', ${b.target_page || 1})"><i class="fas fa-pen-nib"></i> เกษียณ</button>
                         </td>
                     </tr>
                 `;
@@ -751,11 +803,12 @@
                         <table class="table table-bordered table-hover align-middle" style="font-size: 0.85rem;">
                             <thead class="table-primary text-center">
                                 <tr>
-                                    <th style="width: 80px;">เลขรับ</th>
-                                    <th style="width: 130px;">ที่หนังสือ</th>
-                                    <th style="width: 180px;">จาก</th>
+                                    <th style="width: 70px;">เลขรับ</th>
+                                    <th style="width: 120px;">ที่หนังสือ</th>
+                                    <th style="width: 150px;">จาก</th>
                                     <th>เรื่อง</th>
-                                    <th style="width: 160px;">จัดการ</th>
+                                    <th style="width: 100px;">หน้าเกษียณ</th>
+                                    <th style="width: 150px;">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>${rowsHtml}</tbody>
@@ -773,17 +826,17 @@
         renderRegisteredBooksTable(cachedRegisteredBooks);
     }
 
-    async function openRetireModal(bookId, pdfUrl) {
+    async function openRetireModal(bookId, pdfUrl, targetPage) {
         await fetchSignatureStatus();
         if (!userSignatureData || !userSignatureData.signature_png_url) {
-            alert('❌ ไม่สามารถเกษียณหนังสือได้!\nกรุณาไปบันทึกลายเซ็น ชื่อ และตำแหน่งในเมนู "จัดการลายเซ็น/ตำแหน่ง" ก่อนนะคะ');
+            showAppAlert('ไม่สามารถเกษียณหนังสือได้', 'กรุณาไปบันทึกลายเซ็น ชื่อ และตำแหน่งในเมนู "จัดการลายเซ็น/ตำแหน่ง" ก่อนนะคะ', 'error');
             showSarabunView('signature');
             return;
         }
 
         document.getElementById('retireBookId').value = bookId;
+        document.getElementById('targetRetirePage').value = targetPage || 1;
         
-        // กำหนดวันที่ปัจจุบันเป็นค่าเริ่มต้นในช่องวันที่เกษียณ
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('retireDateInput').value = todayStr;
 
@@ -796,7 +849,6 @@
         document.getElementById('previewFullname').innerText = fullname;
         document.getElementById('previewPositionText').innerText = positionText;
 
-        // อัปเดตกล่องพรีวิวบน PDF
         document.getElementById('previewBoxText').innerText = document.getElementById('retireText').value;
         document.getElementById('previewBoxName').innerText = fullname;
         document.getElementById('previewBoxPos').innerText = positionText;
@@ -813,7 +865,7 @@
         const modal = new bootstrap.Modal(document.getElementById('retireModal'));
         modal.show();
 
-        await renderPdfPreviewOnCanvas(pdfUrl);
+        await renderPdfPreviewOnCanvas(pdfUrl, targetPage || 1);
     }
 
     function updatePreviewTextOnCanvas() {
@@ -823,9 +875,10 @@
         document.getElementById('previewBoxDate').innerText = "วันที่: " + toThaiDate(dateVal);
     }
 
-    async function renderPdfPreviewOnCanvas(url) {
+    async function renderPdfPreviewOnCanvas(url, targetPage) {
         const loadingIndicator = document.getElementById('pdfLoadingIndicator');
         const previewBox = document.getElementById('clickPreviewBox');
+        loadingIndicator.innerText = `กำลังโหลดหน้า PDF ที่ ${targetPage}...`;
         loadingIndicator.style.display = 'block';
         previewBox.style.display = 'none';
 
@@ -848,7 +901,10 @@
 
             const loadingTask = pdfjsLib.getDocument({ data: activePdfBytes });
             const pdfDoc = await loadingTask.promise;
-            const page = await pdfDoc.getPage(1);
+            
+            // โหลดเฉพาะหน้าที่ระบุไว้เท่านั้น (ป้องกันหน้าเกินและประหยัดเวลาโหลด)
+            const actualPageNum = Math.max(1, Math.min(targetPage, pdfDoc.numPages));
+            const page = await pdfDoc.getPage(actualPageNum);
 
             const viewport = page.getViewport({ scale: 1.2 });
             pdfPageScale = 1.2;
@@ -896,13 +952,14 @@
         const bookId = document.getElementById('retireBookId').value;
         const retireText = document.getElementById('retireText').value;
         const retireDate = document.getElementById('retireDateInput').value;
+        const targetPage = parseInt(document.getElementById('targetRetirePage').value, 10);
         
         const clickX = parseFloat(document.getElementById('clickPdfX').value) / pdfPageScale;
         const clickY = parseFloat(document.getElementById('clickPdfY').value) / pdfPageScale;
 
         const btn = document.getElementById('confirmRetireBtn');
         btn.disabled = true;
-        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> กำลังฝังฟอนต์และบันทึกทับไฟล์เดิม...`;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> กำลังฝังข้อความลงหน้า ${targetPage}...`;
 
         try {
             if (!activePdfBytes) {
@@ -910,24 +967,22 @@
             }
 
             const pdfDoc = await PDFLib.PDFDocument.load(activePdfBytes);
-            
-            // ลงทะเบียน fontkit เพื่อรองรับการฝังฟอนต์ภาษาไทย (แก้ปัญหา WinAnsi cannot encode)
             pdfDoc.registerFontkit(fontkit);
 
-            // โหลดฟอนต์ TH Sarabun PSK จาก CDN 
             const fontUrl = "https://github.com/joodami/school-assets/raw/main/THSarabunPSK.ttf";
             const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
             const thaiFont = await pdfDoc.embedFont(fontBytes);
 
             const pages = pdfDoc.getPages();
-            const firstPage = pages[0];
-            const { height } = firstPage.getSize();
+            const targetPageIndex = Math.max(0, Math.min(targetPage - 1, pages.length - 1));
+            const selectedPage = pages[targetPageIndex];
+            const { height } = selectedPage.getSize();
 
             const pdfX = clickX;
             const pdfY = height - clickY;
 
-            // 1. ฝังข้อความเกษียณ (ชิดซ้าย)
-            firstPage.drawText(retireText, {
+            // 1. ข้อความเกษียณ
+            selectedPage.drawText(retireText, {
                 x: pdfX,
                 y: pdfY,
                 size: 13,
@@ -937,11 +992,13 @@
 
             let currentY = pdfY - 20;
 
-            // 2. ฝังรูปลายเซ็น
+            // 2. ลายเซ็น
             if (userSignatureData && userSignatureData.signature_png_url) {
-                const sigBase64 = userSignatureData.signature_png_url;
-                const base64Data = sigBase64.split(',')[1] || sigBase64;
-                const binaryString = atob(base64Data);
+                let sigSrc = userSignatureData.signature_png_url;
+                if (sigSrc.startsWith("data:")) {
+                    sigSrc = sigSrc.split(',')[1];
+                }
+                const binaryString = atob(sigSrc);
                 const len = binaryString.length;
                 const sigBytes = new Uint8Array(len);
                 for (let i = 0; i < len; i++) {
@@ -949,7 +1006,7 @@
                 }
 
                 const sigImage = await pdfDoc.embedPng(sigBytes);
-                firstPage.drawImage(sigImage, {
+                selectedPage.drawImage(sigImage, {
                     x: pdfX,
                     y: currentY - 35,
                     width: 90,
@@ -958,9 +1015,9 @@
                 currentY -= 45;
             }
 
-            // 3. ฝังชื่อ-นามสกุล
+            // 3. ชื่อ-นามสกุล
             if (userSignatureData && userSignatureData.fullname) {
-                firstPage.drawText(userSignatureData.fullname, {
+                selectedPage.drawText(userSignatureData.fullname, {
                     x: pdfX,
                     y: currentY,
                     size: 12,
@@ -970,9 +1027,9 @@
                 currentY -= 15;
             }
 
-            // 4. ฝังตำแหน่ง
+            // 4. ตำแหน่ง
             if (userSignatureData && userSignatureData.position_text) {
-                firstPage.drawText(userSignatureData.position_text, {
+                selectedPage.drawText(userSignatureData.position_text, {
                     x: pdfX,
                     y: currentY,
                     size: 11,
@@ -982,10 +1039,10 @@
                 currentY -= 15;
             }
 
-            // 5. ฝังวันที่เกษียณ (บรรทัดล่างสุด)
+            // 5. วันที่ (บรรทัดล่างสุด)
             if (retireDate) {
                 const thaiDateStr = "วันที่ " + toThaiDate(retireDate);
-                firstPage.drawText(thaiDateStr, {
+                selectedPage.drawText(thaiDateStr, {
                     x: pdfX,
                     y: currentY,
                     size: 11,
@@ -996,8 +1053,7 @@
 
             const pdfBytes = await pdfDoc.save();
             
-            // บีบอัดและส่งข้อมูล Base64 เป็นชิ้นส่วนเพื่อป้องกัน Error ข้อมูลใหญ่เกินไป
-            const CHUNK_SIZE = 32768;
+            const CHUNK_SIZE = 16384;
             let binary = "";
             const bytesArray = new Uint8Array(pdfBytes);
             for (let i = 0; i < bytesArray.length; i += CHUNK_SIZE) {
@@ -1009,16 +1065,20 @@
             const payload = {
                 action: "retireBook",
                 book_id: bookId,
-                retire_text: retireText + " (" + toThaiDate(retireDate) + ")",
+                retire_text: retireText + " (หน้าที่ " + targetPage + " - " + toThaiDate(retireDate) + ")",
                 pdf_base64: pdfBase64
             };
 
-            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const res = await fetch(API_URL, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload) 
+            });
             const data = await res.json();
             
             if (data.status === 'success') {
-                alert(data.message);
                 bootstrap.Modal.getInstance(document.getElementById('retireModal')).hide();
+                showAppAlert('สำเร็จ', data.message, 'success');
                 cachedRegisteredBooks = null;
                 loadRegisteredBooks(true);
             } else {
@@ -1027,7 +1087,7 @@
 
         } catch (err) {
             console.error("Retire error:", err);
-            alert('เกิดข้อผิดพลาดในการเกษียณหนังสือ: ' + err.message);
+            showAppAlert('เกิดข้อผิดพลาด', 'ไม่สามารถเกษียณหนังสือได้: ' + err.message, 'error');
         } finally {
             btn.disabled = false;
             btn.innerHTML = `<i class="fas fa-paper-plane"></i> ยืนยันเกษียณและบันทึกทับไฟล์เดิม`;
