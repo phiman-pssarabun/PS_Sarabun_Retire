@@ -1061,17 +1061,11 @@
             const pdfDoc = await PDFLib.PDFDocument.load(activePdfBytes);
             pdfDoc.registerFontkit(fontkit);
 
-            // ใช้ฟอนต์ THSarabunPSK ในรูปแบบ Base64 ฝังในระบบโดยตรง (ไม่ต้องโหลดผ่านเน็ต หมดปัญหา CORS และเน็ตหลุด)
-            const base64Font = "AAEAAAALAIAAAwAwR1NVQi5v3aIAAAOMAAAAHE9TLzJtREl6AAABUAAAAGB2Y21wAAAA5AAAATgAAABjY3Z0AAAA9AAAAEAAAABAZm10eAAAATgAAABubWF4cAAAANQAAAABAAAAAHBuYW1lOaN6cAAAA/wAAALxcG9zdAAAA7QAAAGMAAAACnJlc24AAAT8AAAAJAAAACQACgEAAQABAAAAQwAyAAAAIgAIAAAAAQAAAB2iAQABAAAAAQAAAAAAAAAAAA==";
-            
-            // หากต้องการใช้ฟอนต์มาตรฐานแทนชั่วคราว หรือหากระบบแปลงไบต์
-            // เราใช้ fetch ดึงไฟล์จาก Data URI ภายในเบราว์เซอร์ (ปลอดภัย 100%)
-            const fontRes = await fetch("data:font/ttf;base64," + "AAEAAAAPAIAAAwAwR1NVQi5v3aIAAAOMAAAAHE9TLzJtREl6AAABUAAAAGB2Y21wAAAA5AAAATgAAABjY3Z0AAAA9AAAAEAAAABAZm10eAAAATgAAABubWF4cAAAANQAAAABAAAAAHBuYW1lOaN6cAAAA/wAAALxcG9zdAAAA7QAAAGMAAAACnJlc24AAAT8AAAAJAAAACQACgEAAQABAAAAQwAyAAAAIgAIAAAAAQAAAB2iAQABAAAAAQAAAAAAAAAAAA==");
-            
-            // วิธีที่ชัวร์และเสถียรที่สุด: ใช้ Font มาตรฐานของ PDF-Lib (Helvetica) หรือถ้าต้องการ TH Sarabun 
-            // ให้ดาวน์โหลดฟอนต์ผ่าน Google Fonts API สำรองแทนครับ
-            const fallbackFontUrl = "https://fonts.gstatic.com/s/sarabun/v15/DtVjJx26TKEr37c9aAFInnwwXQ.ttf"; // Sarabun Regular จาก Google Fonts
-            const fontBytes = await fetch(fallbackFontUrl).then(res => res.arrayBuffer());
+            // ใช้ลิงก์ Raw.githack สำหรับดึงฟอนต์ THSarabunPSK.ttf (รองรับ CORS 100%)
+            const fontUrl = "https://raw.githack.com/joodami/school-assets/main/THSarabunPSK.ttf";
+            const fontRes = await fetch(fontUrl);
+            if (!fontRes.ok) throw new Error("ไม่สามารถดาวน์โหลดไฟล์ฟอนต์ได้");
+            const fontBytes = await fontRes.arrayBuffer();
             const thaiFont = await pdfDoc.embedFont(fontBytes);
 
             const pages = pdfDoc.getPages();
