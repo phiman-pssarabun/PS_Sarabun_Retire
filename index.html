@@ -243,7 +243,6 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="retireBookId">
-                <input type="hidden" id="retirePdfUrl">
                 <input type="hidden" id="clickPdfX" value="100">
                 <input type="hidden" id="clickPdfY" value="100">
 
@@ -259,7 +258,7 @@
                             <div id="previewPositionText" class="mt-2 text-muted small"></div>
                         </div>
                         <div class="alert alert-info small mb-0">
-                            <i class="fas fa-info-circle"></i> <b>วิธีใช้งาน:</b> กรอกข้อความเกษียณ แล้วใช้เมาส์ <b>คลิกเลือกตำแหน่ง</b> บนหน้าเอกสาร PDF ทางด้านขวา จุดสีแดงจะแสดงตำแหน่งที่จะวาง จากนั้นกดปุ่มยืนยันครับ
+                            <i class="fas fa-info-circle"></i> <b>วิธีใช้งาน:</b> กรอกข้อความเกษียณ แล้วใช้เมาส์ <b>คลิกเลือกตำแหน่ง</b> บนหน้าเอกสาร PDF ทางด้านขวา จากนั้นกดปุ่มยืนยันครับ
                         </div>
                     </div>
                     <div class="col-md-7 text-center bg-dark p-2 rounded d-flex flex-column align-items-center justify-content-center" style="min-height: 400px; max-height: 70vh; overflow: auto;">
@@ -430,20 +429,10 @@
         }
     }
 
-    // ฟังก์ชันแปลงลิงก์ Drive ให้เป็นลิงก์ภาพ/ไฟล์ดิบ (Direct Link) ที่ใช้แสดงผลและโหลดได้สมบูรณ์
-    function getDirectUrl(url) {
-        if (!url) return '';
-        const match = url.match(/(?:\?id=|\/d\/)([a-zA-Z0-9_-]+)/);
-        if (match && match[1]) {
-            return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-        }
-        return url;
-    }
-
     async function renderSignatureForm() {
         await fetchSignatureStatus();
         const area = document.getElementById('sarabunContentArea');
-        const directSigUrl = userSignatureData && userSignatureData.signature_png_url ? getDirectUrl(userSignatureData.signature_png_url) : '';
+        const sigUrl = userSignatureData && userSignatureData.signature_png_url ? userSignatureData.signature_png_url : '';
 
         area.innerHTML = `
             <div class="form-section">
@@ -458,10 +447,10 @@
                         <label class="form-label small fw-bold">2. ข้อความตำแหน่งประจำตัว</label>
                         <input type="text" class="form-control form-control-sm" id="posTextInput" placeholder="เช่น เจ้าหน้าที่งานสารบรรณ โรงเรียนพิมานพิทยาสรรค์" required value="${userSignatureData && userSignatureData.default_position_text ? userSignatureData.default_position_text : ''}">
                     </div>
-                    ${directSigUrl ? `
+                    ${sigUrl ? `
                         <div class="mb-3">
                             <label class="form-label small fw-bold d-block">ลายเซ็นที่บันทึกไว้ปัจจุบัน:</label>
-                            <img src="${directSigUrl}" style="max-height: 80px;" class="border p-1 bg-white rounded shadow-sm" alt="Signature">
+                            <img src="${sigUrl}" style="max-height: 80px;" class="border p-1 bg-white rounded shadow-sm" alt="Signature">
                         </div>
                     ` : '<div class="text-muted small mb-3">ยังไม่มีการบันทึกรูปลายเซ็นในระบบ</div>'}
                     <button type="submit" class="btn btn-primary btn-sm" id="saveSigBtn"><i class="fas fa-save"></i> บันทึกข้อมูลตำแหน่ง/ลายเซ็น</button>
@@ -770,10 +759,9 @@
         }
 
         document.getElementById('retireBookId').value = bookId;
-        document.getElementById('retirePdfUrl').value = pdfUrl;
         
-        const directSigUrl = getDirectUrl(userSignatureData.signature_png_url);
-        document.getElementById('previewSignatureImg').src = directSigUrl;
+        const sigUrl = userSignatureData.signature_png_url;
+        document.getElementById('previewSignatureImg').src = sigUrl;
         document.getElementById('previewSignatureImg').style.display = 'inline-block';
         document.getElementById('previewPositionText').innerText = userSignatureData.default_position_text;
 
@@ -783,21 +771,30 @@
         await renderPdfPreviewOnCanvas(pdfUrl);
     }
 
+    // 📌 ดึงไฟล์ PDF ผ่าน GAS API แบบ Base64 เพื่อแสดงพรีวิวโดยไม่ติด CORS
     async function renderPdfPreviewOnCanvas(url) {
         const loadingIndicator = document.getElementById('pdfLoadingIndicator');
         const marker = document.getElementById('clickMarker');
         loadingIndicator.style.display = 'block';
         marker.style.display = 'none';
 
-        // แปลงลิงก์ PDF ให้เป็นลิงก์ดาวน์โหลดดิบ (Direct Download Link)
-        let directUrl = getDirectUrl(url);
-        if (directUrl.includes('export=view')) {
-            directUrl = directUrl.replace('export=view', 'export=download');
-        }
-
         try {
-            const response = await fetch(directUrl);
-            activePdfBytes = await response.arrayBuffer();
+            const res = await fetch(`${API_URL}?action=getPdfBase64&url=${encodeURIComponent(url)}`);
+            const data = await res.json();
+            
+            if (data.status !== 'success' || !data.pdf_base64) {
+                throw new Error("ไม่สามารถดึงไฟล์ PDF ได้");
+            }
+
+            // แปลง Base64 กลับเป็น ArrayBuffer สำหรับ PDF.js
+            const base64Data = data.pdf_base64.split(',')[1] || data.pdf_base64;
+            const binaryString = atob(base64Data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            activePdfBytes = bytes.buffer;
 
             const loadingTask = pdfjsLib.getDocument({ data: activePdfBytes });
             const pdfDoc = await loadingTask.promise;
@@ -822,7 +819,7 @@
 
         } catch (err) {
             console.error("PDF Preview Error:", err);
-            loadingIndicator.innerText = 'ไม่สามารถโหลดพรีวิว PDF ได้ (เนื่องจากนโยบายความปลอดภัยเบราว์เซอร์)';
+            loadingIndicator.innerText = 'ไม่สามารถโหลดพรีวิว PDF ได้';
         }
     }
 
@@ -878,10 +875,17 @@
 
             // ฝังรูปลายเซ็น
             if (userSignatureData && userSignatureData.signature_png_url) {
-                const sigDirectUrl = getDirectUrl(userSignatureData.signature_png_url);
-                const sigImageBytes = await fetch(sigDirectUrl).then(res => res.arrayBuffer());
-                const sigImage = await pdfDoc.embedPng(sigImageBytes);
-                
+                // แปลง Base64 ของลายเซ็นให้เป็น Byte สำหรับฝังใน PDF-lib
+                const sigBase64 = userSignatureData.signature_png_url;
+                const base64Data = sigBase64.split(',')[1] || sigBase64;
+                const binaryString = atob(base64Data);
+                const len = binaryString.length;
+                const sigBytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    sigBytes[i] = binaryString.charCodeAt(i);
+                }
+
+                const sigImage = await pdfDoc.embedPng(sigBytes);
                 firstPage.drawImage(sigImage, {
                     x: pdfX,
                     y: pdfY - 50,
@@ -930,7 +934,7 @@
                     <h5 class="text-primary mb-3"><i class="fas fa-clock"></i> รายการพิจารณาหนังสือรับจากธุรการ</h5>
                     <p class="text-muted">กำลังพัฒนาเนื้อหาการรับพิจารณาหนังสือของ ผอ...</p>
                 </div>`;
-        } else {
+            } else {
             area.innerHTML = `<div class="form-section"><h5>เมนู: ${view}</h5><p class="text-muted">กำลังพัฒนาเนื้อหาในส่วนนี้...</p></div>`;
         }
     }
