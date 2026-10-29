@@ -14,7 +14,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
+    <!-- เพิ่ม pdf-lib และ fontkit สำหรับรองรับฟอนต์ภาษาไทยบน PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/@pdf-lib/fontkit/dist/fontkit.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -100,7 +102,6 @@
             max-width: 100%;
             overflow: auto;
         }
-        /* กล่องจำลองข้อความเกษียณชิดซ้าย */
         #clickPreviewBox {
             position: absolute;
             pointer-events: none;
@@ -251,28 +252,34 @@
 
                 <div class="row">
                     <div class="col-md-5">
-                        <div class="mb-3">
+                        <div class="mb-2">
                             <label class="form-label fw-bold small">1. ข้อความเกษียณหนังสือ</label>
                             <textarea class="form-control form-control-sm" id="retireText" rows="3" oninput="updatePreviewTextOnCanvas()" required>เรียน ผู้อำนวยการเพื่อโปรดพิจารณา</textarea>
                         </div>
-                        <div class="p-3 bg-light rounded border text-center mb-3">
-                            <div class="fw-bold small mb-2 text-primary">ตัวอย่างลายเซ็นที่จะใช้ประทับ</div>
-                            <img id="previewSignatureImg" src="" style="max-height: 70px; display: none;" alt="Signature Preview">
-                            <div id="previewPositionText" class="mt-2 text-muted small"></div>
+                        <div class="mb-2">
+                            <label class="form-label fw-bold small">2. วันที่เกษียณหนังสือ (แก้ไขได้)</label>
+                            <input type="date" class="form-control form-control-sm" id="retireDateInput" onchange="updatePreviewTextOnCanvas()">
+                        </div>
+                        <div class="p-3 bg-light rounded border text-center mb-2">
+                            <div class="fw-bold small mb-1 text-primary">ตัวอย่างลายเซ็นและชื่อ-ตำแหน่ง</div>
+                            <img id="previewSignatureImg" src="" style="max-height: 60px; display: none;" alt="Signature">
+                            <div id="previewFullname" class="fw-bold small mt-1"></div>
+                            <div id="previewPositionText" class="text-muted small"></div>
                         </div>
                         <div class="alert alert-info small mb-0">
-                            <i class="fas fa-info-circle"></i> <b>วิธีใช้งาน:</b> พิมพ์ข้อความ แล้ว <b>คลิกเลือกตำแหน่ง</b> บนหน้าเอกสาร PDF ด้านขวา กล่องข้อความชิดซ้ายพร้อมลายเซ็นและชื่อจะจำลองให้เห็นตำแหน่ง จากนั้นกดปุ่มยืนยันครับ
+                            <i class="fas fa-info-circle"></i> <b>วิธีใช้งาน:</b> กรอกข้อความ เลือกวันที่ แล้ว <b>คลิกเลือกตำแหน่ง</b> บนหน้าเอกสาร PDF ด้านขวา จากนั้นกดปุ่มยืนยันครับ
                         </div>
                     </div>
                     <div class="col-md-7 text-center bg-dark p-2 rounded d-flex flex-column align-items-center justify-content-center" style="min-height: 400px; max-height: 70vh; overflow: auto;">
                         <div id="pdfLoadingIndicator" class="text-white small mb-2"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดหน้าเอกสาร...</div>
                         <div id="pdfCanvasContainer" onclick="handlePdfCanvasClick(event)">
                             <canvas id="pdfPreviewCanvas"></canvas>
-                            <!-- กล่องจำลองข้อความเกษียณ ชิดซ้าย พร้อมลายเซ็นและชื่อ-ตำแหน่ง -->
                             <div id="clickPreviewBox">
                                 <div id="previewBoxText" class="fw-bold" style="text-align: left;">เรียน ผู้อำนวยการเพื่อโปรดพิจารณา</div>
                                 <img id="previewBoxSig" src="" style="max-height: 25px; display: block; margin: 2px 0;" alt="Sig">
-                                <div id="previewBoxPos" class="small" style="font-size: 9px; color: #475569; text-align: left;">(ชื่อ-ตำแหน่ง)</div>
+                                <div id="previewBoxName" class="fw-bold" style="font-size: 10px; text-align: left;"></div>
+                                <div id="previewBoxPos" class="small" style="font-size: 9px; color: #475569; text-align: left;"></div>
+                                <div id="previewBoxDate" class="small mt-1" style="font-size: 9px; color: #1a5276; text-align: left;"></div>
                             </div>
                         </div>
                     </div>
@@ -441,10 +448,12 @@
         await fetchSignatureStatus();
         const area = document.getElementById('sarabunContentArea');
         const sigUrl = userSignatureData && userSignatureData.signature_png_url ? userSignatureData.signature_png_url : '';
+        const fullname = userSignatureData && userSignatureData.fullname ? userSignatureData.fullname : '';
+        const positionText = userSignatureData && userSignatureData.position_text ? userSignatureData.position_text : '';
 
         area.innerHTML = `
             <div class="form-section">
-                <h6 class="text-primary fw-bold mb-3"><i class="fas fa-signature"></i> จัดการลายเซ็นและข้อความตำแหน่ง</h6>
+                <h6 class="text-primary fw-bold mb-3"><i class="fas fa-signature"></i> จัดการลายเซ็น ชื่อ และตำแหน่ง</h6>
                 <form onsubmit="saveSignatureData(event)">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">1. อัปโหลดรูปภาพลายเซ็นใหม่ (ไฟล์ PNG พื้นหลังใส)</label>
@@ -452,8 +461,12 @@
                         <div class="form-text small">หากมีลายเซ็นเดิมอยู่แล้ว สามารถข้ามการอัปโหลดได้หากไม่ต้องการเปลี่ยนรูป</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">2. ข้อความตำแหน่งประจำตัว</label>
-                        <input type="text" class="form-control form-control-sm" id="posTextInput" placeholder="เช่น เจ้าหน้าที่งานสารบรรณ โรงเรียนพิมานพิทยาสรรค์" required value="${userSignatureData && userSignatureData.default_position_text ? userSignatureData.default_position_text : ''}">
+                        <label class="form-label small fw-bold">2. ชื่อ - นามสกุล (สำหรับแสดงใต้ลายเซ็น)</label>
+                        <input type="text" class="form-control form-control-sm" id="fullnameInput" placeholder="เช่น (นายอัฟฟาน ทองกรด)" required value="${fullname}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">3. ตำแหน่งประจำตัว (สำหรับแสดงใต้ชื่อ)</label>
+                        <input type="text" class="form-control form-control-sm" id="posTextInput" placeholder="เช่น เจ้าหน้าที่งานสารบรรณ โรงเรียนพิมานพิทยาสรรค์" required value="${positionText}">
                     </div>
                     ${sigUrl ? `
                         <div class="mb-3">
@@ -461,7 +474,7 @@
                             <img src="${sigUrl}" style="max-height: 80px;" class="border p-1 bg-white rounded shadow-sm" alt="Signature">
                         </div>
                     ` : '<div class="text-muted small mb-3">ยังไม่มีการบันทึกรูปลายเซ็นในระบบ</div>'}
-                    <button type="submit" class="btn btn-primary btn-sm" id="saveSigBtn"><i class="fas fa-save"></i> บันทึกข้อมูลตำแหน่ง/ลายเซ็น</button>
+                    <button type="submit" class="btn btn-primary btn-sm" id="saveSigBtn"><i class="fas fa-save"></i> บันทึกข้อมูลลายเซ็น/ชื่อ/ตำแหน่ง</button>
                 </form>
             </div>`;
     }
@@ -472,6 +485,7 @@
         btn.disabled = true; btn.innerText = 'กำลังบันทึก...';
 
         const fileInput = document.getElementById('sigFileInput');
+        const fullname = document.getElementById('fullnameInput').value;
         const posText = document.getElementById('posTextInput').value;
 
         let base64 = "";
@@ -482,7 +496,8 @@
         const payload = {
             action: "saveSignature",
             role: currentUser.role,
-            default_position_text: posText,
+            fullname: fullname,
+            position_text: posText,
             signature_base64: base64,
             existing_url: userSignatureData ? userSignatureData.signature_png_url : ""
         };
@@ -761,24 +776,32 @@
     async function openRetireModal(bookId, pdfUrl) {
         await fetchSignatureStatus();
         if (!userSignatureData || !userSignatureData.signature_png_url) {
-            alert('❌ ไม่สามารถเกษียณหนังสือได้!\nกรุณาไปบันทึกลายเซ็นในเมนู "จัดการลายเซ็น/ตำแหน่ง" ก่อนนะคะ');
+            alert('❌ ไม่สามารถเกษียณหนังสือได้!\nกรุณาไปบันทึกลายเซ็น ชื่อ และตำแหน่งในเมนู "จัดการลายเซ็น/ตำแหน่ง" ก่อนนะคะ');
             showSarabunView('signature');
             return;
         }
 
         document.getElementById('retireBookId').value = bookId;
         
+        // กำหนดวันที่ปัจจุบันเป็นค่าเริ่มต้นในช่องวันที่เกษียณ
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('retireDateInput').value = todayStr;
+
         const sigUrl = userSignatureData.signature_png_url;
-        const posText = userSignatureData.default_position_text || '';
+        const fullname = userSignatureData.fullname || '';
+        const positionText = userSignatureData.position_text || '';
 
         document.getElementById('previewSignatureImg').src = sigUrl;
         document.getElementById('previewSignatureImg').style.display = 'inline-block';
-        document.getElementById('previewPositionText').innerText = posText;
+        document.getElementById('previewFullname').innerText = fullname;
+        document.getElementById('previewPositionText').innerText = positionText;
 
-        // อัปเดตข้อความ ลายเซ็น และตำแหน่งในกล่องพรีวิว
+        // อัปเดตกล่องพรีวิวบน PDF
         document.getElementById('previewBoxText').innerText = document.getElementById('retireText').value;
-        document.getElementById('previewBoxPos').innerText = '(' + posText + ')';
-        
+        document.getElementById('previewBoxName').innerText = fullname;
+        document.getElementById('previewBoxPos').innerText = positionText;
+        document.getElementById('previewBoxDate').innerText = "วันที่: " + toThaiDate(todayStr);
+
         const boxSig = document.getElementById('previewBoxSig');
         if (sigUrl) {
             boxSig.src = sigUrl;
@@ -795,7 +818,9 @@
 
     function updatePreviewTextOnCanvas() {
         const textVal = document.getElementById('retireText').value;
+        const dateVal = document.getElementById('retireDateInput').value;
         document.getElementById('previewBoxText').innerText = textVal;
+        document.getElementById('previewBoxDate').innerText = "วันที่: " + toThaiDate(dateVal);
     }
 
     async function renderPdfPreviewOnCanvas(url) {
@@ -870,13 +895,14 @@
     async function confirmRetireBook() {
         const bookId = document.getElementById('retireBookId').value;
         const retireText = document.getElementById('retireText').value;
+        const retireDate = document.getElementById('retireDateInput').value;
         
         const clickX = parseFloat(document.getElementById('clickPdfX').value) / pdfPageScale;
         const clickY = parseFloat(document.getElementById('clickPdfY').value) / pdfPageScale;
 
         const btn = document.getElementById('confirmRetireBtn');
         btn.disabled = true;
-        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> กำลังประมวลผลและบันทึกทับไฟล์เดิม...`;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> กำลังฝังฟอนต์และบันทึกทับไฟล์เดิม...`;
 
         try {
             if (!activePdfBytes) {
@@ -884,6 +910,15 @@
             }
 
             const pdfDoc = await PDFLib.PDFDocument.load(activePdfBytes);
+            
+            // ลงทะเบียน fontkit เพื่อรองรับการฝังฟอนต์ภาษาไทย (แก้ปัญหา WinAnsi cannot encode)
+            pdfDoc.registerFontkit(fontkit);
+
+            // โหลดฟอนต์ TH Sarabun PSK จาก CDN 
+            const fontUrl = "https://github.com/joodami/school-assets/raw/main/THSarabunPSK.ttf";
+            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+            const thaiFont = await pdfDoc.embedFont(fontBytes);
+
             const pages = pdfDoc.getPages();
             const firstPage = pages[0];
             const { height } = firstPage.getSize();
@@ -891,19 +926,18 @@
             const pdfX = clickX;
             const pdfY = height - clickY;
 
-            // ฝังข้อความเกษียณ (ชิดซ้าย)
-            const helveticaFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+            // 1. ฝังข้อความเกษียณ (ชิดซ้าย)
             firstPage.drawText(retireText, {
                 x: pdfX,
                 y: pdfY,
                 size: 13,
-                font: helveticaFont,
+                font: thaiFont,
                 color: PDFLib.rgb(0, 0, 0.5),
             });
 
             let currentY = pdfY - 20;
 
-            // ฝังรูปลายเซ็น (ใต้ข้อความเกษียณ)
+            // 2. ฝังรูปลายเซ็น
             if (userSignatureData && userSignatureData.signature_png_url) {
                 const sigBase64 = userSignatureData.signature_png_url;
                 const base64Data = sigBase64.split(',')[1] || sigBase64;
@@ -924,20 +958,45 @@
                 currentY -= 45;
             }
 
-            // ฝังข้อความชื่อและตำแหน่ง (ใต้ลายเซ็น)
-            if (userSignatureData && userSignatureData.default_position_text) {
-                firstPage.drawText("(" + userSignatureData.default_position_text + ")", {
+            // 3. ฝังชื่อ-นามสกุล
+            if (userSignatureData && userSignatureData.fullname) {
+                firstPage.drawText(userSignatureData.fullname, {
+                    x: pdfX,
+                    y: currentY,
+                    size: 12,
+                    font: thaiFont,
+                    color: PDFLib.rgb(0, 0, 0),
+                });
+                currentY -= 15;
+            }
+
+            // 4. ฝังตำแหน่ง
+            if (userSignatureData && userSignatureData.position_text) {
+                firstPage.drawText(userSignatureData.position_text, {
                     x: pdfX,
                     y: currentY,
                     size: 11,
-                    font: helveticaFont,
-                    color: PDFLib.rgb(0.2, 0.2, 0.2),
+                    font: thaiFont,
+                    color: PDFLib.rgb(0.3, 0.3, 0.3),
+                });
+                currentY -= 15;
+            }
+
+            // 5. ฝังวันที่เกษียณ (บรรทัดล่างสุด)
+            if (retireDate) {
+                const thaiDateStr = "วันที่ " + toThaiDate(retireDate);
+                firstPage.drawText(thaiDateStr, {
+                    x: pdfX,
+                    y: currentY,
+                    size: 11,
+                    font: thaiFont,
+                    color: PDFLib.rgb(0.1, 0.1, 0.5),
                 });
             }
 
             const pdfBytes = await pdfDoc.save();
             
-            // แยกย่อหน้า Base64 เป็นชิ้นเล็กๆ เพื่อป้องกันการส่งข้อมูลล้มเหลว
+            // บีบอัดและส่งข้อมูล Base64 เป็นชิ้นส่วนเพื่อป้องกัน Error ข้อมูลใหญ่เกินไป
             const CHUNK_SIZE = 32768;
             let binary = "";
             const bytesArray = new Uint8Array(pdfBytes);
@@ -950,7 +1009,7 @@
             const payload = {
                 action: "retireBook",
                 book_id: bookId,
-                retire_text: retireText,
+                retire_text: retireText + " (" + toThaiDate(retireDate) + ")",
                 pdf_base64: pdfBase64
             };
 
