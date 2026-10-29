@@ -1051,32 +1051,73 @@
 
         const btn = document.getElementById('confirmRetireBtn');
         btn.disabled = true;
-        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> กำลังฝังข้อความลงหน้า ${targetPage}...`;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> กำลังสร้างและฝังตราข้อความลงหน้า ${targetPage}...`;
 
         try {
             if (!activePdfBytes) {
                 throw new Error("ไม่พบข้อมูลไฟล์ PDF");
             }
 
-            const pdfDoc = await PDFLib.PDFDocument.load(activePdfBytes);
-            pdfDoc.registerFontkit(fontkit);
+            // 1. สร้าง Canvas ชั่วคราวเพื่อวาดข้อความเกษียณ ลายเซ็น ชื่อ และวันที่ ด้วยฟอนต์ Sarabun ของจริง
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 220;
+            const ctx = canvas.getContext('2d');
 
-            // ดึงไฟล์ฟอนต์ THSarabunPSK จากลิงก์สำรองที่เสถียร หรือแปลงผ่านตัวเข้ารหัสภายใน
-            // ใช้ลิงก์ CDN ที่รองรับตระกูลฟอนต์ไทยแท้ .ttf
-            const fontUrl = "https://cdn.jsdelivr.net/gh/lazywasabi/thai-font-assets@master/fonts/THSarabunPSK/THSarabunPSK.ttf";
-            
-            let fontBytes;
-            try {
-                const fontRes = await fetch(fontUrl);
-                if (!fontRes.ok) throw new Error("Fetch failed");
-                fontBytes = await fontRes.arrayBuffer();
-            } catch (e) {
-                // หากดึงจาก cdn แรกไม่ผ่าน ใช้ลิงก์สำรองจาก GitHub คุณอัฟฟานโดยตรง
-                const backupRes = await fetch("https://raw.githubusercontent.com/joodami/school-assets/main/THSarabunPSK.ttf");
-                fontBytes = await backupRes.arrayBuffer();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // วาดข้อความเกษียณ
+            ctx.font = '18px "Sarabun", sans-serif';
+            ctx.fillStyle = '#000080';
+            ctx.textAlign = 'left';
+            ctx.fillText(retireText, 10, 25);
+
+            let currentY = 55;
+
+            // วาดรูปลายเซ็น (ถ้ามี)
+            if (userSignatureData && userSignatureData.signature_png_url) {
+                await new Promise((resolve) => {
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.onload = function() {
+                        ctx.drawImage(img, 10, currentY, 120, 45);
+                        resolve();
+                    };
+                    img.onerror = () => resolve();
+                    img.src = userSignatureData.signature_png_url;
+                });
+                currentY += 55;
             }
 
-            const thaiFont = await pdfDoc.embedFont(fontBytes);
+            // วาดชื่อ-นามสกุล
+            if (userSignatureData && userSignatureData.fullname) {
+                ctx.font = 'bold 16px "Sarabun", sans-serif';
+                ctx.fillStyle = '#000000';
+                ctx.fillText(userSignatureData.fullname, 10, currentY);
+                currentY += 22;
+            }
+
+            // วาดตำแหน่ง
+            if (userSignatureData && userSignatureData.position_text) {
+                ctx.font = '15px "Sarabun", sans-serif';
+                ctx.fillStyle = '#475569';
+                ctx.fillText(userSignatureData.position_text, 10, currentY);
+                currentY += 22;
+            }
+
+            // วาดวันที่
+            if (retireDate) {
+                ctx.font = '15px "Sarabun", sans-serif';
+                ctx.fillStyle = '#1a5276';
+                ctx.fillText("วันที่ " + toThaiDate(retireDate), 10, currentY);
+            }
+
+            // 2. แปลง Canvas เป็น PNG Image Bytes เพื่อนำไปแปะลง PDF-Lib
+            const stampDataUrl = canvas.toDataURL('image/png');
+            const stampImageBytes = await fetch(stampDataUrl).then(res => res.arrayBuffer());
+
+            const pdfDoc = await PDFLib.PDFDocument.load(activePdfBytes);
+            const embeddedStampImage = await pdfDoc.embedPng(stampImageBytes);
 
             const pages = pdfDoc.getPages();
             const targetPageIndex = Math.max(0, Math.min(targetPage - 1, pages.length - 1));
@@ -1084,72 +1125,15 @@
             const { height } = selectedPage.getSize();
 
             const pdfX = clickX;
-            const pdfY = height - clickY;
+            const pdfY = height - clickY - 110; // ปรับตำแหน่งแกน Y ให้สมดุล
 
-            selectedPage.drawText(retireText, {
+            // 3. วาดภาพตราเกษียณลงบนหน้า PDF ทันที (หมดปัญหาเรื่องฟอนต์ภาษาไทย 100%)
+            selectedPage.drawImage(embeddedStampImage, {
                 x: pdfX,
                 y: pdfY,
-                size: 13,
-                font: thaiFont,
-                color: PDFLib.rgb(0, 0, 0.5),
+                width: 250,
+                height: 100,
             });
-
-            let currentY = pdfY - 20;
-
-            if (userSignatureData && userSignatureData.signature_png_url) {
-                let sigSrc = userSignatureData.signature_png_url;
-                if (sigSrc.startsWith("data:")) {
-                    sigSrc = sigSrc.split(',')[1];
-                }
-                const binaryString = atob(sigSrc);
-                const len = binaryString.length;
-                const sigBytes = new Uint8Array(len);
-                for (let i = 0; i < len; i++) {
-                    sigBytes[i] = binaryString.charCodeAt(i);
-                }
-
-                const sigImage = await pdfDoc.embedPng(sigBytes);
-                selectedPage.drawImage(sigImage, {
-                    x: pdfX,
-                    y: currentY - 35,
-                    width: 90,
-                    height: 35
-                });
-                currentY -= 45;
-            }
-
-            if (userSignatureData && userSignatureData.fullname) {
-                selectedPage.drawText(userSignatureData.fullname, {
-                    x: pdfX,
-                    y: currentY,
-                    size: 12,
-                    font: thaiFont,
-                    color: PDFLib.rgb(0, 0, 0),
-                });
-                currentY -= 15;
-            }
-
-            if (userSignatureData && userSignatureData.position_text) {
-                selectedPage.drawText(userSignatureData.position_text, {
-                    x: pdfX,
-                    y: currentY,
-                    size: 11,
-                    font: thaiFont,
-                    color: PDFLib.rgb(0.3, 0.3, 0.3),
-                });
-                currentY -= 15;
-            }
-
-            if (retireDate) {
-                const thaiDateStr = "วันที่ " + toThaiDate(retireDate);
-                selectedPage.drawText(thaiDateStr, {
-                    x: pdfX,
-                    y: currentY,
-                    size: 11,
-                    font: thaiFont,
-                    color: PDFLib.rgb(0.1, 0.1, 0.5),
-                });
-            }
 
             const pdfBytes = await pdfDoc.save();
             
@@ -1200,7 +1184,7 @@
             btn.innerHTML = `<i class="fas fa-paper-plane"></i> ยืนยันเกษียณและบันทึกทับไฟล์เดิม`;
         }
     }
-
+    
     function showExecView(view) {
         document.querySelectorAll('#executiveDashboard .menu-link').forEach(el => el.classList.remove('active'));
         const activeEl = document.getElementById('e_' + view);
