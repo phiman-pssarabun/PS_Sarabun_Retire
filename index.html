@@ -185,7 +185,7 @@
         </div>
     </div>
 
-    <!-- Header หลัก (แสดงเมื่อเข้าสู่ระบบภายในเรียบร้อยแล้ว) -->
+    <!-- Header หลัก -->
     <header id="headerArea" class="app-header hidden">
         <img src="https://raw.githubusercontent.com/joodami/school-assets/main/logo.png" alt="Logo" class="school-logo">
         <h1 class="app-title">PS-Sarabun Hub</h1>
@@ -531,10 +531,12 @@
                 const res = await fetch(`${API_URL}?action=getNextRegNum`);
                 const data = await res.json();
                 if (data.status === 'success') {
-                    document.getElementById('regNum').value = data.next_reg_num;
+                    const regInput = document.getElementById('regNum');
+                    if (regInput) regInput.value = data.next_reg_num;
                 }
             } catch (err) {
-                document.getElementById('regNum').value = "1";
+                const regInput = document.getElementById('regNum');
+                if (regInput) regInput.value = "1";
             }
         } else if (view === 'listRegistered') {
             loadRegisteredBooks();
@@ -756,7 +758,8 @@
             const nextRes = await fetch(`${API_URL}?action=getNextRegNum`);
             const nextData = await nextRes.json();
             if (nextData.status === 'success') {
-                document.getElementById('regNum').value = nextData.next_reg_num;
+                const regInput = document.getElementById('regNum');
+                if (regInput) regInput.value = data.next_reg_num;
             }
             preloadRegisteredBooksCache();
         } catch (err) {
@@ -814,7 +817,6 @@
         }
     }
 
-    // ระบบ Debounce Search ค้นหาลื่นไหล ไม่กระตุกหน่วง
     function handleSearchInput(e) {
         const val = e.target.value;
         clearTimeout(searchDebounceTimer);
@@ -822,7 +824,7 @@
             currentSearchQuery = val.toLowerCase().trim();
             window.currentBookPage = 1;
             renderRegisteredBooksTable(cachedRegisteredBooks);
-        }, 200); // หน่วงเวลา 0.2 วินาทีเพื่อให้พิมพ์ต่อเนื่องได้ลื่นไหล
+        }, 200);
     }
 
     function renderRegisteredBooksTable(books) {
@@ -834,7 +836,7 @@
                 return String(b.reg_num).toLowerCase().includes(currentSearchQuery) ||
                        String(b.doc_no).toLowerCase().includes(currentSearchQuery) ||
                        String(b.subject).toLowerCase().includes(currentSearchQuery) ||
-                       String(b.doc_from || '').toLowerCase().includes(currentSearchQuery); // ค้นหาจากหน่วยงานที่ส่งมาด้วย
+                       String(b.doc_from || '').toLowerCase().includes(currentSearchQuery);
             });
 
             const totalBooks = [...filteredBooks].sort((a, b) => parseInt(b.reg_num, 10) - parseInt(a.reg_num, 10));
@@ -902,7 +904,6 @@
                     ${paginationHtml}
                 </div>`;
             
-            // รักษาโฟกัสช่องค้นหาไว้เสมอเพื่อให้พิมพ์ต่อได้ลื่นๆ
             const searchInput = document.getElementById('searchBookInput');
             if (searchInput && currentSearchQuery) {
                 searchInput.focus();
@@ -1039,7 +1040,7 @@
         document.getElementById('clickPdfY').value = y;
     }
 
-   async function confirmRetireBook() {
+    async function confirmRetireBook() {
         const bookId = document.getElementById('retireBookId').value;
         const retireText = document.getElementById('retireText').value;
         const retireDate = document.getElementById('retireDateInput').value;
@@ -1060,8 +1061,12 @@
             const pdfDoc = await PDFLib.PDFDocument.load(activePdfBytes);
             pdfDoc.registerFontkit(fontkit);
 
-            const fontUrl = "https://github.com/joodami/school-assets/raw/main/THSarabunPSK.ttf";
-            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+            // 🛠️ แก้ไขลิงก์ฟอนต์เป็น jsDelivr CDN เพื่อหลีกเลี่ยงปัญหา CORS Policy
+            const fontUrl = "https://cdn.jsdelivr.net/gh/joodami/school-assets@main/THSarabunPSK.ttf";
+            const fontBytes = await fetch(fontUrl).then(res => {
+                if (!res.ok) throw new Error("ไม่สามารถดาวน์โหลดไฟล์ฟอนต์ได้");
+                return res.arrayBuffer();
+            });
             const thaiFont = await pdfDoc.embedFont(fontBytes);
 
             const pages = pdfDoc.getPages();
@@ -1139,7 +1144,6 @@
 
             const pdfBytes = await pdfDoc.save();
             
-            // แปลงไบต์ PDF เป็น Base64 แบบแบ่งก้อนเพื่อป้องกันหน่วยความจำล้น
             const CHUNK_SIZE = 16384;
             let binary = "";
             const bytesArray = new Uint8Array(pdfBytes);
@@ -1156,7 +1160,6 @@
                 pdf_base64: pdfBase64
             };
 
-            // ใช้ POST แบบ text/plain เพื่อเลี่ยงปัญหา CORS Block จาก Google Apps Script
             const res = await fetch(API_URL, { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
