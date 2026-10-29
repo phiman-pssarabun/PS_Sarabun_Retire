@@ -1039,7 +1039,7 @@
         document.getElementById('clickPdfY').value = y;
     }
 
-    async function confirmRetireBook() {
+   async function confirmRetireBook() {
         const bookId = document.getElementById('retireBookId').value;
         const retireText = document.getElementById('retireText').value;
         const retireDate = document.getElementById('retireDateInput').value;
@@ -1139,6 +1139,7 @@
 
             const pdfBytes = await pdfDoc.save();
             
+            // แปลงไบต์ PDF เป็น Base64 แบบแบ่งก้อนเพื่อป้องกันหน่วยความจำล้น
             const CHUNK_SIZE = 16384;
             let binary = "";
             const bytesArray = new Uint8Array(pdfBytes);
@@ -1155,12 +1156,20 @@
                 pdf_base64: pdfBase64
             };
 
+            // ใช้ POST แบบ text/plain เพื่อเลี่ยงปัญหา CORS Block จาก Google Apps Script
             const res = await fetch(API_URL, { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload) 
             });
-            const data = await res.json();
+            
+            const textResult = await res.text();
+            let data;
+            try {
+                data = JSON.parse(textResult);
+            } catch (e) {
+                throw new Error("เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง: " + textResult);
+            }
             
             if (data.status === 'success') {
                 bootstrap.Modal.getInstance(document.getElementById('retireModal')).hide();
