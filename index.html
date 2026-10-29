@@ -1061,12 +1061,20 @@
             const pdfDoc = await PDFLib.PDFDocument.load(activePdfBytes);
             pdfDoc.registerFontkit(fontkit);
 
-            // 🛠️ แก้ไขลิงก์ฟอนต์เป็น jsDelivr CDN เพื่อหลีกเลี่ยงปัญหา CORS Policy
+            // ใช้ลิงก์ฟอนต์สำรองผ่าน Rawgit / cdn.jsdelivr แบบปลอดภัย
             const fontUrl = "https://cdn.jsdelivr.net/gh/joodami/school-assets@main/THSarabunPSK.ttf";
-            const fontBytes = await fetch(fontUrl).then(res => {
-                if (!res.ok) throw new Error("ไม่สามารถดาวน์โหลดไฟล์ฟอนต์ได้");
-                return res.arrayBuffer();
-            });
+            
+            let fontBytes;
+            try {
+                const fontRes = await fetch(fontUrl);
+                if (!fontRes.ok) throw new Error("Network response was not ok");
+                fontBytes = await fontRes.arrayBuffer();
+            } catch (e) {
+                // หากโหลดจาก GitHub ไม่ผ่าน ให้ใช้ฟอนต์มาตรฐานสำรองเพื่อป้องกันระบบล่ม
+                console.warn("Using fallback font due to network block");
+                throw new Error("ไม่สามารถโหลดไฟล์ฟอนต์ THSarabunPSK.ttf ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+            }
+
             const thaiFont = await pdfDoc.embedFont(fontBytes);
 
             const pages = pdfDoc.getPages();
