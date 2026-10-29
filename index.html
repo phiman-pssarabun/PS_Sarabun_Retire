@@ -24,6 +24,7 @@
     <style>
         :root {
             --primary: #1a5276; 
+            --accent: #d4ac0d;
             --bg: #f8fafc;
             --main-gradient: linear-gradient(135deg, #1a5276, #2980b9); 
         }
@@ -35,6 +36,25 @@
             -webkit-tap-highlight-color: transparent;
         }
         .app-wrapper { display: flex; flex-direction: column; height: 100vh; }
+        
+        /* ดีไซน์หน้าต้อนรับ (Hero Welcome Section) */
+        .welcome-hero {
+            background: linear-gradient(rgba(26, 82, 118, 0.9), rgba(41, 128, 185, 0.85)), url('https://images.unsplash.com/photo-1497633762265-9d179a990aa6?q=80&w=1600&auto=format&fit=crop') no-repeat center center;
+            background-size: cover;
+            flex-grow: 1; display: flex; align-items: center; justify-content: center;
+            padding: 20px; color: white; text-align: center;
+        }
+        .welcome-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px; padding: 40px 30px; max-width: 600px; width: 100%;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2); color: #334155;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .app-header {
             background: #ffffff; text-align: center;
             border-bottom: 4px solid var(--primary);
@@ -77,7 +97,7 @@
         .menu-link:hover { background: #f1f5f9; color: var(--primary); }
         .menu-link.active { background: var(--main-gradient); color: white; font-weight: 600; box-shadow: 0 3px 10px rgba(26,82,118,0.25); }
         .sidebar-footer { padding: 10px 15px; border-top: 1px solid #f1f5f9; background: #fafafa; flex-shrink: 0; }
-        .main-content { flex-grow: 1; overflow-y: auto; padding: 20px; background: var(--bg); }
+        .main-content { flex-grow: 1; overflow-y: auto; padding: 20px; background: var(--bg); position: relative; }
         .form-section { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
 
         .loading-bar-container {
@@ -128,13 +148,28 @@
 <body>
 
 <div class="app-wrapper">
-    <header id="headerArea" class="app-header">
-        <img src="https://raw.githubusercontent.com/joodami/school-assets/main/logo.png" alt="Logo" class="school-logo">
-        <h1 class="app-title">PS-Sarabun Hub</h1>
-        <p class="app-subtitle">ระบบสารบรรณอิเล็กทรอนิกส์ โรงเรียนพิมานพิทยาสรรค์</p>
-    </header>
+    <!-- หน้าต้อนรับสุดสวย (Hero Welcome Landing) -->
+    <div id="welcomeLanding" class="welcome-hero">
+        <div class="welcome-card">
+            <img src="https://raw.githubusercontent.com/joodami/school-assets/main/logo.png" alt="Logo" style="height: 65px; margin-bottom: 15px;">
+            <h2 class="fw-bold text-primary mb-1">PS-Sarabun Hub</h2>
+            <p class="text-muted small mb-4">ระบบสารบรรณอิเล็กทรอนิกส์และระบบบริหารจัดการเอกสารโรงเรียนพิมานพิทยาสรรค์</p>
+            <div class="d-grid gap-3">
+                <button class="btn btn-primary py-2 fw-bold shadow-sm" onclick="showHubSelection()" style="background: var(--main-gradient); border: none;">
+                    <i class="fas fa-sign-in-alt me-2"></i> เข้าสู่ระบบสารบรรณ
+                </button>
+            </div>
+            <div class="mt-4 text-muted" style="font-size: 0.78rem;">
+                <i class="fas fa-shield-alt text-success me-1"></i> ระบบรักษาความปลอดภัยมาตรฐานโรงเรียน
+            </div>
+        </div>
+    </div>
 
-    <div id="homeHubView" class="container-box">
+    <div id="homeHubView" class="container-box hidden">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold text-primary">เลือกบทบาทการใช้งานระบบ</h3>
+            <p class="text-muted small">โปรดเลือกเมนูระบบงานที่ท่านต้องการปฏิบัติงาน</p>
+        </div>
         <div class="menu-grid">
             <div class="hub-card" onclick="openLoginModal('EXECUTIVE', 'ระบบฝ่ายบริหาร (ผอ. / รอง ผอ.)')">
                 <div class="hub-icon"><i class="fas fa-user-shield"></i></div>
@@ -152,7 +187,17 @@
                 <div class="hub-desc">สำหรับบุคลากรภายในโรงเรียน (เตรียมรองรับการใช้งาน)</div>
             </div>
         </div>
+        <div class="text-center mt-4">
+            <button class="btn btn-outline-secondary btn-sm" onclick="backToWelcome()"><i class="fas fa-arrow-left me-1"></i> กลับหน้าแรก</button>
+        </div>
     </div>
+
+    <!-- Header หลัก (แสดงเมื่อเข้าสู่ระบบแล้ว) -->
+    <header id="headerArea" class="app-header hidden">
+        <img src="https://raw.githubusercontent.com/joodami/school-assets/main/logo.png" alt="Logo" class="school-logo">
+        <h1 class="app-title">PS-Sarabun Hub</h1>
+        <p class="app-subtitle">ระบบสารบรรณอิเล็กทรอนิกส์ โรงเรียนพิมานพิทยาสรรค์</p>
+    </header>
 
     <div id="sarabunDashboard" class="dashboard-container hidden">
         <div class="sidebar">
@@ -237,7 +282,7 @@
     </div>
 </div>
 
-<!-- Modal แจ้งเตือนทั่วไป (ใช้สำหรับเคส Error หรือแจ้งเตือนอื่นๆ ยกเว้นตอนเพิ่มหนังสือสำเร็จ) -->
+<!-- Modal แจ้งเตือนทั่วไป -->
 <div class="modal fade" id="appAlertModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -323,6 +368,16 @@
     let activePdfBytes = null;
     let currentSearchQuery = "";
 
+    function showHubSelection() {
+        document.getElementById('welcomeLanding').classList.add('hidden');
+        document.getElementById('homeHubView').classList.remove('hidden');
+    }
+
+    function backToWelcome() {
+        document.getElementById('homeHubView').classList.add('hidden');
+        document.getElementById('welcomeLanding').classList.remove('hidden');
+    }
+
     function showAppAlert(title, message, type = 'info') {
         document.getElementById('appAlertTitle').innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle text-success' : type === 'error' ? 'exclamation-triangle text-danger' : 'info-circle'}"></i> ${title}`;
         document.getElementById('appAlertMessage').innerText = message;
@@ -355,7 +410,9 @@
         currentUser = { username: username, role: role };
         
         bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+        document.getElementById('welcomeLanding').classList.add('hidden');
         document.getElementById('homeHubView').classList.add('hidden');
+        document.getElementById('headerArea').classList.remove('hidden');
 
         if (role === 'SARABUN') {
             document.getElementById('sarabunDashboard').classList.remove('hidden');
@@ -378,11 +435,12 @@
         cachedRegisteredBooks = null; 
         currentSearchQuery = "";
         document.getElementById('loginForm').reset();
-        document.getElementById('homeHubView').classList.remove('hidden');
+        document.getElementById('headerArea').classList.add('hidden');
         document.getElementById('sarabunDashboard').classList.add('hidden');
         document.getElementById('executiveDashboard').classList.add('hidden');
         document.getElementById('sarabunContentArea').innerHTML = '';
         document.getElementById('execContentArea').innerHTML = '';
+        document.getElementById('welcomeLanding').classList.remove('hidden');
     }
 
     async function fetchSignatureStatus() {
@@ -416,6 +474,12 @@
         if(activeEl) activeEl.classList.add('active');
 
         const area = document.getElementById('sarabunContentArea');
+        
+        // แสดง Spinner โหลดเดอร์ระหว่างดึงข้อมูลหรือสลับหน้า เพื่อไม่ให้ผู้ใช้รู้สึกว่าระบบค้าง
+        if (view === 'signature') {
+            area.innerHTML = `<div class="form-section text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i><br><span class="text-muted">กำลังโหลดข้อมูลลายเซ็นและตำแหน่ง...</span></div>`;
+        }
+
         if (view === 'register') {
             area.innerHTML = `
                 <div class="form-section">
@@ -484,7 +548,7 @@
         } else if (view === 'listRegistered') {
             loadRegisteredBooks();
         } else if (view === 'signature') {
-            renderSignatureForm();
+            await renderSignatureForm();
         } else {
             area.innerHTML = `<div class="form-section"><h5>เมนู: ${view}</h5><p class="text-muted">กำลังพัฒนาเนื้อหาในส่วนนี้...</p></div>`;
         }
@@ -693,7 +757,6 @@
             await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
             cachedRegisteredBooks = null;
             
-            // รีเซ็ตฟอร์มทันทีโดยไม่แจ้งเตือน เพื่อให้พร้อมคีย์หนังสือเล่มถัดไป
             document.getElementById('registerBookForm').reset();
             document.getElementById('totalPages').value = "1";
             document.getElementById('targetPage').value = "1";
@@ -770,7 +833,6 @@
         const area = document.getElementById('sarabunContentArea');
         
         if (books && books.length > 0) {
-            // กรองข้อมูลตามคำค้นหา (ค้นหาจากเลขรับ, ที่หนังสือ, หรือเรื่อง)
             const filteredBooks = books.filter(b => {
                 if (!currentSearchQuery) return true;
                 return String(b.reg_num).toLowerCase().includes(currentSearchQuery) ||
@@ -1005,7 +1067,6 @@
             const pdfX = clickX;
             const pdfY = height - clickY;
 
-            // 1. ข้อความเกษียณ
             selectedPage.drawText(retireText, {
                 x: pdfX,
                 y: pdfY,
@@ -1016,7 +1077,6 @@
 
             let currentY = pdfY - 20;
 
-            // 2. ลายเซ็น
             if (userSignatureData && userSignatureData.signature_png_url) {
                 let sigSrc = userSignatureData.signature_png_url;
                 if (sigSrc.startsWith("data:")) {
@@ -1039,7 +1099,6 @@
                 currentY -= 45;
             }
 
-            // 3. ชื่อ-นามสกุล
             if (userSignatureData && userSignatureData.fullname) {
                 selectedPage.drawText(userSignatureData.fullname, {
                     x: pdfX,
@@ -1051,7 +1110,6 @@
                 currentY -= 15;
             }
 
-            // 4. ตำแหน่ง
             if (userSignatureData && userSignatureData.position_text) {
                 selectedPage.drawText(userSignatureData.position_text, {
                     x: pdfX,
@@ -1063,7 +1121,6 @@
                 currentY -= 15;
             }
 
-            // 5. วันที่ (บรรทัดล่างสุด)
             if (retireDate) {
                 const thaiDateStr = "วันที่ " + toThaiDate(retireDate);
                 selectedPage.drawText(thaiDateStr, {
